@@ -370,7 +370,6 @@ bot.on('callback_query', async (query) => {
         saveUsers(users);
         await bot.sendMessage(userId, `✅ Модель изменена на "Premium V1"`);
     } else if (query.data === 'set_free_v1') {
-        users[userId].model = "Free V1";
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
             users[userId] = {
