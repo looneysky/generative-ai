@@ -1,0 +1,135 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const crypto = require('crypto');
+const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
+const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
+
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const secret = process.env.SECRET; // Секретное слово для хэша
+
+// Вспомогательная функция для вычисления SHA-1 хэша
+function calculateHash(params, secret) {
+    const str = `${params.notification_type}&${params.operation_id}&${params.amount}&${params.currency}&${params.datetime}&${params.sender}&${params.codepro}&${secret}&${params.label}`;
+    return crypto.createHash('sha1').update(str, 'utf8').digest('hex');
+}
+
+// Вебхук для приема уведомлений
+app.post('/webhook', (req, res) => {
+    const {
+        notification_type,
+        operation_id,
+        amount,
+        currency,
+        datetime,
+        sender,
+        codepro,
+        label, // label будет использоваться как userId
+        sha1_hash,
+        test_notification // флаг тестового уведомления
+    } = req.body;
+
+    console.log(req.body);
+
+    // Проверяем тестовое уведомление
+    if (test_notification === 'true') {
+        console.log('Test notification received');
+        return res.status(200).send('Test notification received');
+    }
+
+    // Проверяем наличие label
+    if (!label) {
+        return res.status(400).send('Label (userId) is missing');
+    }
+
+    // Проверяем хэш
+    const calculatedHash = calculateHash(req.body, secret);
+    if (calculatedHash !== sha1_hash) {
+        return res.status(400).send('Invalid hash');
+    }
+
+    // Проверяем валюту (должна быть рубли - 643)
+    if (currency !== '643') {
+        return res.status(400).send('Invalid currency');
+    }
+
+    // Логика обновления пользователя в зависимости от суммы
+    const userId = label; // Используем label как идентификатор пользователя
+
+    const users = loadUsers();
+
+    if (!users[userId]) {
+        users[userId] = {
+            attempts: 0,
+            premium: {
+                isPremium: false,
+                expire: null
+            },
+            model: "Premium V1" // По умолчанию Free V1
+        };
+    }
+
+    const now = new Date();
+    let expireDate = new Date(now);
+
+    // Если у пользователя уже есть активный премиум, продлеваем срок от текущей даты окончания
+    if (users[userId].premium.isPremium && users[userId].premium.expire) {
+        const currentExpireDate = new Date(users[userId].premium.expire);
+        if (currentExpireDate > now) {
+            expireDate = new Date(currentExpireDate); // Начинаем с текущей даты окончания
+        }
+    }
+
+    // Увеличиваем срок действия премиума в зависимости от суммы
+    if (amount === '199.00') {
+        expireDate.setMonth(expireDate.getMonth() + 1); // 1 месяц
+    } else if (amount === '399.00') {
+        expireDate.setMonth(expireDate.getMonth() + 6); // 6 месяцев
+    } else if (amount === '599.00') {
+        expireDate.setFullYear(expireDate.getFullYear() + 1); // 1 год
+    } else {
+        return res.status(400).send('Invalid amount');
+    }
+
+    // Обновляем информацию о пользователе
+    users[userId].premium.isPremium = true;
+    users[userId].premium.expire = expireDate;
+
+    // Передаем объект users в saveUsers
+    saveUsers(users);
+
+    // Форматируем дату в формате DD.MM.YY
+    const formattedExpireDate = expireDate.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+    });
+
+    // Отправляем сообщение с форматированной датой
+    bot.sendMessage(userId, `🎉 Ваш PREMIUM успешно активирован и действует до: ${formattedExpireDate}`);
+
+    console.log(`User ${userId} has purchased premium. Expiration date: ${expireDate}`);
+
+    // Возвращаем успешный ответ
+    res.status(200).send('OK');
+});
+
+// API для получения списка пользователей
+app.get('/api/getUsers', (req, res) => {
+    try {
+        const users = loadUsers(); // Загружаем пользователей
+        res.status(200).json(users); // Возвращаем пользователей в формате JSON
+    } catch (error) {
+        console.error('Ошибка при получении пользователей:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// Запускаем сервер
+app.listen(3000, () => {
+    console.log('Webhook server is running on port 3000');
+});
+
+// Экспортируем модуль, если необходимо
+module.exports = app; // Или другие необходимые сущности
