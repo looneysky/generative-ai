@@ -1,4 +1,8 @@
 const fetch = require('node-fetch');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto'); // Для генерации случайного имени файла
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const translatte = require('translatte');
@@ -89,7 +93,7 @@ async function createImage(prompt, userId) {
                 height = 1024;
             } else if (users[userId].model === 'Premium V1') {
                 token = runwareApi;
-                steps = 50;
+                steps = 70;
                 width = 832;
                 height = 1216;
                 sampler = 'DPM++ SDE' // Используем семплер DPM++ SDE
@@ -134,12 +138,12 @@ async function createImage(prompt, userId) {
                         taskUUID: uuidv4(), // Уникальный идентификатор задачи
                         enableHighResFix: true // Включаем фиксацию высокого разрешения (если нужно)
                     }];
-                    
+
                     // Добавляем семплер только если он не равен null
                     if (sampler !== null) {
                         imageRequest.sampler = sampler;
                     }
-                    
+
                     // Отправляем запрос                    
                     ws.send(JSON.stringify(imageRequest));
 
@@ -304,8 +308,29 @@ bot.on('message', async (msg) => {
             const imageUrl = await createImage(translatedText, userId);
             console.log('Изображение успешно получено:', imageUrl);
 
-            // Отправка сгенерированного изображения
-            await bot.sendPhoto(chatId, imageUrl, {
+            // Генерация уникального имени файла
+            // Генерация случайного имени файла
+            const randomFileName = crypto.randomBytes(16).toString('hex') + '.jpg';
+            const filePath = path.join(__dirname, randomFileName);
+
+            // Скачиваем изображение
+            const response = await axios({
+                url: imageUrl,
+                responseType: 'stream', // Записываем файл как поток
+            });
+
+            // Записываем изображение на диск
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            // Ждем завершения записи файла
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            // Отправляем локальный файл в чат
+            await bot.sendPhoto(chatId, filePath, {
                 caption: `🎉 Вот ваша генерация по запросу:\n\n"${msg.text}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
                 reply_markup: {
                     inline_keyboard: [[
@@ -324,9 +349,21 @@ bot.on('message', async (msg) => {
                 },
             });
 
+            // Удаляем файл после отправки
+            fs.unlinkSync(filePath);
+            console.log(`Файл ${randomFileName} успешно удален после отправки`);
         } catch (error) {
-            console.error('Ошибка при генерации изображения:', error);
-            await bot.sendMessage(chatId, '❌ Произошла ошибка при генерации изображения. Пожалуйста, попробуйте позже.');
+            if (error.response && error.response.body && error.response.body.error_code === 429) {
+                // Получаем значение retry-after
+                const retryAfter = error.response.body.parameters.retry_after;
+                console.error(`Превышен лимит запросов. Повторите попытку через ${retryAfter} секунд.`);
+                setTimeout(async () => {
+                    await bot.sendMessage(chatId, '⚠️ Превышен лимит запросов. Попробуйте снова.');
+                }, retryAfter * 1000); // Ждем указанное время
+            } else {
+                console.error('Ошибка при генерации изображения:', error);
+                await bot.sendMessage(chatId, '❌ Произошла ошибка при генерации изображения. Пожалуйста, попробуйте позже.');
+            }
         }
 
         // Удаление сообщения о процессе
@@ -463,14 +500,29 @@ bot.on('callback_query', async (query) => {
             const imageUrl = await createImage(prompt, userId);
             console.log('Изображение успешно получено:', imageUrl);
 
-            // Обновление сообщения с новым изображением
-            await bot.editMessageMedia({
-                type: 'photo',
-                media: imageUrl,
-                caption: `🎉 Вот ваша новая генерация по запросу:\n\n"${prompt}"\n\n👉 Нажмите кнопку ниже, чтобы попробовать снова.`,
-            }, {
-                chat_id: chatId,
-                message_id: query.message.message_id,
+            // Генерация случайного имени файла
+            const randomFileName = crypto.randomBytes(16).toString('hex') + '.jpg';
+            const filePath = path.join(__dirname, randomFileName);
+
+            // Скачиваем изображение
+            const response = await axios({
+                url: imageUrl,
+                responseType: 'stream', // Записываем файл как поток
+            });
+
+            // Записываем изображение на диск
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            // Ждем завершения записи файла
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            // Отправляем локальный файл в чат
+            await bot.sendPhoto(chatId, filePath, {
+                caption: `🎉 Вот ваша генерация по запросу:\n\n"${prompt}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
                 reply_markup: {
                     inline_keyboard: [[
                         {
@@ -487,6 +539,10 @@ bot.on('callback_query', async (query) => {
                     ]],
                 },
             });
+
+            // Удаляем файл после отправки
+            fs.unlinkSync(filePath);
+            console.log(`Файл ${randomFileName} успешно удален после отправки`);
 
         } catch (error) {
             console.error('Ошибка при регенерации изображения:', error);

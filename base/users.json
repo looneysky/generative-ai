@@ -8,7 +8,7 @@
     "model": "Premium V2"
   },
   "332915197": {
-    "attemps": 0,
+    "attemps": 2,
     "premium": {
       "isPremium": false,
       "expire": null
@@ -265,6 +265,14 @@
   },
   "6017010717": {
     "attemps": 0,
+    "premium": {
+      "isPremium": false,
+      "expire": null
+    },
+    "model": "Premium V1"
+  },
+  "5787500227": {
+    "attemps": 1,
     "premium": {
       "isPremium": false,
       "expire": null
