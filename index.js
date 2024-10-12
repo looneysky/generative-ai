@@ -1,4 +1,8 @@
 const fetch = require('node-fetch');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto'); // Для генерации случайного имени файла
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const translatte = require('translatte');
@@ -9,7 +13,6 @@ const { secret, token, runwareApi, runwareApi2 } = require('./modules/configModu
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
 const { containsForbiddenWords } = require('./modules/forbiddenWords');
-const { createImage } = require('./modules/createImage');
 
 let prompts = {}; // Объект для хранения запросов по индексам
 
@@ -66,6 +69,119 @@ async function isUserSubscribed(chatId, channelUsername) {
     } catch (error) {
         console.error('Ошибка при проверке подписки:', error);
         return false;
+    }
+}
+
+async function createImage(prompt, userId) {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    const connectAndGenerateImage = () => {
+        return new Promise((resolve, reject) => {
+            console.log('Создаем WebSocket соединение...');
+            const ws = new WebSocket('wss://ws-api.runware.ai/v1');
+            const users = loadUsers();
+            let token;
+            let steps;
+            let width;
+            let height;
+            let sampler;
+            if (users[userId].model === 'Free V1') {
+                token = runwareApi2;
+                steps = 10;
+                width = 1024;
+                height = 1024;
+            } else if (users[userId].model === 'Premium V1') {
+                token = runwareApi;
+                steps = 70;
+                width = 832;
+                height = 1216;
+                sampler = 'DPM++ SDE' // Используем семплер DPM++ SDE
+            } else {
+                token = runwareApi;
+                steps = 50;
+                width = 1024;
+                height = 1024;
+            }
+
+            console.log(token)
+
+            ws.on('open', () => {
+                console.log('WebSocket соединение открыто. Отправляем запрос на аутентификацию...');
+                const authRequest = [{ taskType: 'authentication', apiKey: token }];
+                ws.send(JSON.stringify(authRequest));
+            });
+
+            ws.on('message', (data) => {
+                console.log(data)
+                // Преобразуем Buffer в строку
+                const text = data.toString();
+                console.log(text)
+                const response = JSON.parse(text);
+
+                // Проверяем, если у пользователя уже выбрана модель
+                const selectedModel = users[userId].model; // По умолчанию 'Free V1', если модель не выбрана
+                console.log(models[selectedModel])
+                console.log(steps)
+
+                if (response.data && response.data[0]?.taskType === 'authentication') {
+                    console.log('Аутентификация успешна. Отправляем запрос на генерацию изображения...');
+                    const imageRequest = [{
+                        positivePrompt: prompt, // Ваш хорошо сформулированный запрос
+                        model: models[selectedModel], // Основная модель
+                        steps: steps, // Увеличенное количество шагов для улучшения деталей
+                        width: width, // Ширина изображения
+                        height: height, // Высота изображения
+                        numberResults: 1, // Количество изображений
+                        outputType: ['URL'], // Формат вывода
+                        taskType: 'imageInference', // Тип задачи
+                        taskUUID: uuidv4(), // Уникальный идентификатор задачи
+                        enableHighResFix: true // Включаем фиксацию высокого разрешения (если нужно)
+                    }];
+
+                    // Добавляем семплер только если он не равен null
+                    if (sampler !== null) {
+                        imageRequest.sampler = sampler;
+                    }
+
+                    // Отправляем запрос                    
+                    ws.send(JSON.stringify(imageRequest));
+
+                } if (response.data && response.data[0]?.taskType === 'imageInference') {
+                    console.log('Изображение успешно сгенерировано. Получаем URL...');
+                    resolve(response.data[0].imageURL);
+                    ws.close();
+                } else {
+                    console.log('Неожиданное сообщение от WebSocket:', response);
+                }
+            });
+
+
+
+            ws.on('error', (err) => {
+                console.error('Произошла ошибка WebSocket:', err);
+                reject(err);
+            });
+
+            ws.on('close', (code, reason) => {
+                console.log(`WebSocket соединение закрыто. Код: ${code}, Причина: ${reason}`);
+            });
+        });
+    };
+
+    while (attempt < maxRetries) {
+        try {
+            return await connectAndGenerateImage();
+        } catch (error) {
+            console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
+            attempt += 1;
+
+            if (attempt < maxRetries) {
+                console.log(`Переотправка запроса... (${attempt}/${maxRetries})`);
+            } else {
+                throw new Error('Не удалось сгенерировать изображение после 3 попыток.');
+            }
+        }
     }
 }
 
@@ -172,13 +288,13 @@ bot.on('message', async (msg) => {
 
         console.log(`Получен запрос на генерацию изображения: ${msg.text}`);
 
-        /*const channelUsername = "@photoai_channel"
+        const channelUsername = "@photoai_channel"
 
         const subscribed = await isUserSubscribed(chatId, channelUsername);
         if (!subscribed) {
             await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelUsername}, чтобы использовать этого бота.`);
             return;
-        }*/
+        }
 
         // Уведомление о начале генерации
         const processingMsg = await bot.sendMessage(chatId, `🛠️ Начинаю генерацию по запросу:\n\n"${msg.text}"\n\nПожалуйста, подождите...`);
@@ -192,8 +308,29 @@ bot.on('message', async (msg) => {
             const imageUrl = await createImage(translatedText, userId);
             console.log('Изображение успешно получено:', imageUrl);
 
-            // Отправка сгенерированного изображения
-            await bot.sendPhoto(chatId, imageUrl, {
+            // Генерация уникального имени файла
+            // Генерация случайного имени файла
+            const randomFileName = crypto.randomBytes(16).toString('hex') + '.jpg';
+            const filePath = path.join(__dirname, randomFileName);
+
+            // Скачиваем изображение
+            const response = await axios({
+                url: imageUrl,
+                responseType: 'stream', // Записываем файл как поток
+            });
+
+            // Записываем изображение на диск
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            // Ждем завершения записи файла
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            // Отправляем локальный файл в чат
+            await bot.sendPhoto(chatId, filePath, {
                 caption: `🎉 Вот ваша генерация по запросу:\n\n"${msg.text}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
                 reply_markup: {
                     inline_keyboard: [[
@@ -212,9 +349,21 @@ bot.on('message', async (msg) => {
                 },
             });
 
+            // Удаляем файл после отправки
+            fs.unlinkSync(filePath);
+            console.log(`Файл ${randomFileName} успешно удален после отправки`);
         } catch (error) {
-            console.error('Ошибка при генерации изображения:', error);
-            await bot.sendMessage(chatId, '❌ Произошла ошибка при генерации изображения. Пожалуйста, попробуйте позже.');
+            if (error.response && error.response.body && error.response.body.error_code === 429) {
+                // Получаем значение retry-after
+                const retryAfter = error.response.body.parameters.retry_after;
+                console.error(`Превышен лимит запросов. Повторите попытку через ${retryAfter} секунд.`);
+                setTimeout(async () => {
+                    await bot.sendMessage(chatId, '⚠️ Превышен лимит запросов. Попробуйте снова.');
+                }, retryAfter * 1000); // Ждем указанное время
+            } else {
+                console.error('Ошибка при генерации изображения:', error);
+                await bot.sendMessage(chatId, '❌ Произошла ошибка при генерации изображения. Пожалуйста, попробуйте позже.');
+            }
         }
 
         // Удаление сообщения о процессе
@@ -258,7 +407,6 @@ bot.on('callback_query', async (query) => {
         saveUsers(users);
         await bot.sendMessage(userId, `✅ Модель изменена на "Premium V1"`);
     } else if (query.data === 'set_free_v1') {
-        users[userId].model = "Free V1";
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
             users[userId] = {
@@ -352,14 +500,29 @@ bot.on('callback_query', async (query) => {
             const imageUrl = await createImage(prompt, userId);
             console.log('Изображение успешно получено:', imageUrl);
 
-            // Обновление сообщения с новым изображением
-            await bot.editMessageMedia({
-                type: 'photo',
-                media: imageUrl,
-                caption: `🎉 Вот ваша новая генерация по запросу:\n\n"${prompt}"\n\n👉 Нажмите кнопку ниже, чтобы попробовать снова.`,
-            }, {
-                chat_id: chatId,
-                message_id: query.message.message_id,
+            // Генерация случайного имени файла
+            const randomFileName = crypto.randomBytes(16).toString('hex') + '.jpg';
+            const filePath = path.join(__dirname, randomFileName);
+
+            // Скачиваем изображение
+            const response = await axios({
+                url: imageUrl,
+                responseType: 'stream', // Записываем файл как поток
+            });
+
+            // Записываем изображение на диск
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            // Ждем завершения записи файла
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            // Отправляем локальный файл в чат
+            await bot.sendPhoto(chatId, filePath, {
+                caption: `🎉 Вот ваша генерация по запросу:\n\n"${prompt}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
                 reply_markup: {
                     inline_keyboard: [[
                         {
@@ -376,6 +539,10 @@ bot.on('callback_query', async (query) => {
                     ]],
                 },
             });
+
+            // Удаляем файл после отправки
+            fs.unlinkSync(filePath);
+            console.log(`Файл ${randomFileName} успешно удален после отправки`);
 
         } catch (error) {
             console.error('Ошибка при регенерации изображения:', error);
