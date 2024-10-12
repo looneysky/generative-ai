@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -124,6 +125,14 @@ app.get('/api/getUsers', (req, res) => {
         console.error('Ошибка при получении пользователей:', error);
         res.status(500).send('Internal Server Error');
     }
+});
+
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, '/../public')));
+
+// Define a route that serves the index.html file automatically
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '/../public', 'index.html'));
 });
 
 // Запускаем сервер
