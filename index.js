@@ -296,13 +296,13 @@ bot.on('message', async (msg) => {
 
         console.log(`Получен запрос на генерацию изображения: ${msg.text}`);
 
-        /*const channelUsername = "@photoai_channel"
+        const channelUsername = "@photoai_channel"
 
         const subscribed = await isUserSubscribed(chatId, channelUsername);
         if (!subscribed) {
             await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelUsername}, чтобы использовать этого бота.`);
             return;
-        }*/
+        }
 
         // Уведомление о начале генерации
         const processingMsg = await bot.sendMessage(chatId, `🛠️ Начинаю генерацию по запросу:\n\n"${msg.text}"\n\nПожалуйста, подождите...`);
