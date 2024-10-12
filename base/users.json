@@ -278,5 +278,13 @@
       "expire": null
     },
     "model": "Premium V1"
+  },
+  "101": {
+    "attemps": 1,
+    "premium": {
+      "isPremium": true,
+      "expire": null
+    },
+    "model": "Free V1"
   }
 }
