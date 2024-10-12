@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="preloader">
+        <div class="loader-text">
+            PHOTO AI
+        </div>
+        <div class="premium-edition-light">
+            PREMIUM EDITION
+        </div>
+    </div>
+    <div class="app-container">
+        <header>
+            <h1>PHOTOLIGHT AI</h1>
+            <div class="premium-edition">
+                PREMIUM EDITION
+            </div>
+        </header>
+
+        <main>
+            <div class="image-container" id="imageContainer">
+                <p class="placeholder-text">Your generated image will appear here</p>
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="promptInput" placeholder="Enter your prompt..."
+                    onkeyup="debounceGenerateImage(event)">
+            </div>
+        </main>
+
+        <footer>
+            <button id="regenerateBtn" onclick="regenerateImage()">🔄 Regenerate Image</button>
+        </footer>
+    </div>
+
+    <script>
+        let timeout;
+
+        function debounceGenerateImage(event) {
+            // Clear previous timeout if any
+            clearTimeout(timeout);
+            // Set a new timeout to call generateImage after 300ms
+            timeout = setTimeout(() => {
+                generateImage();
+            }, 300);
+        }
+
+        async function generateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const imageContainer = document.getElementById('imageContainer');
+
+            if (prompt.length > 0) {
+                try {
+                    const response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const imageUrl = data.imageUrl;
+                        imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated Image">`;
+                    } else {
+                        imageContainer.innerHTML = `<p class="placeholder-text">Failed to generate image.</p>`;
+                    }
+                } catch (error) {
+                    console.error('Error generating image:', error);
+                    imageContainer.innerHTML = `<p class="placeholder-text">An error occurred.</p>`;
+                }
+            } else {
+                imageContainer.innerHTML = `<p class="placeholder-text">Your generated image will appear here</p>`;
+            }
+        }
+
+        async function regenerateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const imageContainer = document.getElementById('imageContainer');
+
+            if (prompt.length > 0) {
+                try {
+                    const response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const imageUrl = data.imageUrl;
+                        imageContainer.innerHTML = `<img src="${imageUrl}" alt="Regenerated Image">`;
+                    } else {
+                        imageContainer.innerHTML = `<p class="placeholder-text">Failed to regenerate image.</p>`;
+                    }
+                } catch (error) {
+                    console.error('Error regenerating image:', error);
+                    imageContainer.innerHTML = `<p class="placeholder-text">An error occurred.</p>`;
+                }
+            }
+        }
+    </script>
+    <script>
+        window.onload = function () {
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                preloader.style.opacity = '0'; // Уменьшаем непрозрачность
+                setTimeout(() => {
+                    preloader.style.display = 'none'; // Убираем прелоадер после анимации
+                }, 4500); // Задержка для плавного исчезновения
+            }, 4000); // Задержка для плавного исчезновения
+        };
+    </script>
+</body>
+
+</html>
