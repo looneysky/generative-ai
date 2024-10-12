@@ -86,6 +86,7 @@ async function createImage(prompt, userId) {
             let width;
             let height;
             let sampler;
+            let lora;
             if (users[userId].model === 'Free V1') {
                 token = runwareApi2;
                 steps = 10;
@@ -102,6 +103,14 @@ async function createImage(prompt, userId) {
                 steps = 50;
                 width = 1024;
                 height = 1024;
+                lora = [
+                    {
+                        model: 'urn:air:flux1:lora:civitai:721805@843538',
+                    },
+                    {
+                        model: 'urn:air:flux1:lora:civitai:658411@736706'
+                    }
+                ]
             }
 
             console.log(token)
@@ -136,13 +145,12 @@ async function createImage(prompt, userId) {
                         outputType: ['URL'], // Формат вывода
                         taskType: 'imageInference', // Тип задачи
                         taskUUID: uuidv4(), // Уникальный идентификатор задачи
-                        enableHighResFix: true // Включаем фиксацию высокого разрешения (если нужно)
+                        enableHighResFix: true, // Включаем фиксацию высокого разрешения (если нужно)
+                        sampler: sampler !== null ? sampler : undefined, // Добавляем семплер, если он не равен null
+                        lora: lora !== null ? lora : undefined // Добавляем lora, если он не равен null
                     }];
-
-                    // Добавляем семплер только если он не равен null
-                    if (sampler !== null) {
-                        imageRequest.sampler = sampler;
-                    }
+                    
+                    console.log(imageRequest);                    
 
                     // Отправляем запрос                    
                     ws.send(JSON.stringify(imageRequest));
@@ -288,13 +296,13 @@ bot.on('message', async (msg) => {
 
         console.log(`Получен запрос на генерацию изображения: ${msg.text}`);
 
-        const channelUsername = "@photoai_channel"
+        /*const channelUsername = "@photoai_channel"
 
         const subscribed = await isUserSubscribed(chatId, channelUsername);
         if (!subscribed) {
             await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelUsername}, чтобы использовать этого бота.`);
             return;
-        }
+        }*/
 
         // Уведомление о начале генерации
         const processingMsg = await bot.sendMessage(chatId, `🛠️ Начинаю генерацию по запросу:\n\n"${msg.text}"\n\nПожалуйста, подождите...`);
