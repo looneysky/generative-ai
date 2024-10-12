@@ -1,85 +1,127 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Premium Edition Layout</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f7f7f7;
-  }
-  
-  .container {
-    border: 2px solid #000;
-    width: 430px; /* Ширина по изображению */
-    height: 932px; /* Высота по изображению */
-    padding: 20px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  .header {
-    text-align: center;
-  }
-
-  .content-placeholder {
-    background-color: #ccc;
-    height: 200px; /* Произвольная высота для заполнителя */
-    align-self: center;
-  }
-
-  .bottom-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .button-container {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 20px;
-  }
-
-  button {
-    border: none;
-    background-color: #e0e0e0;
-    padding: 10px;
-    cursor: pointer;
-  }
-
-  input[type='text'] {
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-    border: none;
-    border-bottom: 2px solid #000;
-    outline: none;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>PREMIUM EDITION</h1>
+    <div id="preloader">
+        <div class="loader-text">
+            PHOTO AI
+        </div>
+        <div class="premium-edition-light">
+            PREMIUM EDITION
+        </div>
     </div>
-    <div class="content-placeholder"></div>
-    <div class="bottom-section">
-      <div class="button-container">
-        <button>Генерировать</button>
-        <button>Регенерировать</button>
-      </div>
-      <input type="text" placeholder="Введите текст">
+    <div class="app-container">
+        <header>
+            <h1>PHOTOLIGHT AI</h1>
+            <div class="premium-edition">
+                PREMIUM EDITION
+            </div>
+        </header>
+
+        <main>
+            <div class="image-container" id="imageContainer">
+                <p class="placeholder-text">Your generated image will appear here</p>
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="promptInput" placeholder="Enter your prompt..."
+                    onkeyup="debounceGenerateImage(event)">
+            </div>
+        </main>
+
+        <footer>
+            <button id="regenerateBtn" onclick="regenerateImage()">🔄 Regenerate Image</button>
+        </footer>
     </div>
-  </div>
+
+    <script>
+        let timeout;
+
+        function debounceGenerateImage(event) {
+            // Clear previous timeout if any
+            clearTimeout(timeout);
+            // Set a new timeout to call generateImage after 300ms
+            timeout = setTimeout(() => {
+                generateImage();
+            }, 300);
+        }
+
+        async function generateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const imageContainer = document.getElementById('imageContainer');
+
+            if (prompt.length > 0) {
+                try {
+                    const response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const imageUrl = data.imageUrl;
+                        imageContainer.innerHTML = `<img src="${imageUrl}" alt="Generated Image">`;
+                    } else {
+                        imageContainer.innerHTML = `<p class="placeholder-text">Failed to generate image.</p>`;
+                    }
+                } catch (error) {
+                    console.error('Error generating image:', error);
+                    imageContainer.innerHTML = `<p class="placeholder-text">An error occurred.</p>`;
+                }
+            } else {
+                imageContainer.innerHTML = `<p class="placeholder-text">Your generated image will appear here</p>`;
+            }
+        }
+
+        async function regenerateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const imageContainer = document.getElementById('imageContainer');
+
+            if (prompt.length > 0) {
+                try {
+                    const response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const imageUrl = data.imageUrl;
+                        imageContainer.innerHTML = `<img src="${imageUrl}" alt="Regenerated Image">`;
+                    } else {
+                        imageContainer.innerHTML = `<p class="placeholder-text">Failed to regenerate image.</p>`;
+                    }
+                } catch (error) {
+                    console.error('Error regenerating image:', error);
+                    imageContainer.innerHTML = `<p class="placeholder-text">An error occurred.</p>`;
+                }
+            }
+        }
+    </script>
+    <script>
+        window.onload = function () {
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                preloader.style.opacity = '0'; // Уменьшаем непрозрачность
+                setTimeout(() => {
+                    preloader.style.display = 'none'; // Убираем прелоадер после анимации
+                }, 4500); // Задержка для плавного исчезновения
+            }, 4000); // Задержка для плавного исчезновения
+        };
+    </script>
 </body>
+
 </html>

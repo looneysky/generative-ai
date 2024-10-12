@@ -2,11 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
+const { createImage } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
 const path = require('path');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json()); // Use this to parse JSON
 
 const secret = process.env.SECRET; // Секретное слово для хэша
 
@@ -115,6 +117,26 @@ app.post('/webhook', (req, res) => {
     // Возвращаем успешный ответ
     res.status(200).send('OK');
 });
+
+// Add this route in your Express server code
+app.post('/api/generate-image', async (req, res) => {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+        return res.status(400).send('Prompt is required');
+    }
+
+    try {
+        const userId = '101'; // Replace with the actual user ID, if necessary
+        const imageUrl = await createImage(prompt, userId); // Call your existing createImage function
+
+        res.status(200).json({ imageUrl });
+    } catch (error) {
+        console.error('Error generating image:', error);
+        res.status(500).send('Error generating image');
+    }
+});
+
 
 // API для получения списка пользователей
 app.get('/api/getUsers', (req, res) => {
