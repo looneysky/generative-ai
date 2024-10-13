@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>AI Image Generator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -112,6 +113,25 @@
         }
     </script>
     <script>
+        var WebApp = window.Telegram.WebApp;
+
+        async function checkSubscription() {
+            const userId = WebApp.WebAppUser.userId;
+            const channelUsername = "@photoai_channel";
+
+            const response = await fetch('/api/check-subscription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, channelUsername })
+            });
+
+            const result = await response.json();
+            const message = result.subscribed ? '✅ Вы подписаны на канал!' : '❌ Вы не подписаны на канал.';
+            console.log(message)
+        }
+
         window.onload = function () {
             setTimeout(() => {
                 const preloader = document.getElementById('preloader');

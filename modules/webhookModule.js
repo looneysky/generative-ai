@@ -18,6 +18,31 @@ function calculateHash(params, secret) {
     return crypto.createHash('sha1').update(str, 'utf8').digest('hex');
 }
 
+// Функция для проверки подписки пользователя
+async function isUserSubscribed(userId, channelUsername) {
+    try {
+        const chatMember = await bot.getChatMember(channelUsername, userId);
+
+        // Проверяем статус
+        return chatMember.status === 'member' || chatMember.status === 'administrator';
+    } catch (error) {
+        console.error('Ошибка проверки подписки:', error);
+        return false; // Возвращаем false в случае ошибки
+    }
+}
+
+// API для проверки подписки
+app.post('/api/check-subscription', async (req, res) => {
+    const { userId, channelUsername } = req.body;
+
+    if (!userId || !channelUsername) {
+        return res.status(400).send('userId и channelUsername обязательны');
+    }
+
+    const subscribed = await isUserSubscribed(userId, channelUsername);
+    res.json({ subscribed });
+});
+
 // Вебхук для приема уведомлений
 app.post('/webhook', (req, res) => {
     const {
