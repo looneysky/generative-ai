@@ -113,10 +113,8 @@
         }
     </script>
     <script>
-        var WebApp = window.Telegram.WebApp;
-
         async function checkSubscription() {
-            const userId = WebApp.WebAppUser.userId;
+            const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
             const channelUsername = "@photoai_channel";
 
             const response = await fetch('/api/check-subscription', {
@@ -128,18 +126,30 @@
             });
 
             const result = await response.json();
-            const message = result.subscribed ? '✅ Вы подписаны на канал!' : '❌ Вы не подписаны на канал.';
-            console.log(message)
+            const preloader = document.getElementById('preloader');
+            const loaderText = preloader.querySelector('.loader-text');
+            const premiumText = preloader.querySelector('.premium-edition-light')
+
+            if (!result.subscribed) {
+                // Если пользователь не подписан, меняем текст прелоадера
+                loaderText.textContent = '❌ Пожалуйста подпишитесь.';
+                // Создаем кликабельный элемент для ссылки на канал
+                premiumText.innerHTML = `<a href="https://t.me/photoai_channel" target="_blank" style="color: inherit; text-decoration: none;">@photolight_channel</a>`;
+                // Не выключаем прелоадер
+            } else {
+                // Убираем прелоадер через 4.5 секунды
+                setTimeout(() => {
+                    preloader.style.opacity = '0'; // Уменьшаем непрозрачность
+                    setTimeout(() => {
+                        preloader.style.display = 'none'; // Убираем прелоадер после анимации
+                    }, 450); // Задержка для плавного исчезновения
+                }, 4000); // Задержка перед исчезновением
+            }
         }
 
         window.onload = function () {
-            setTimeout(() => {
-                const preloader = document.getElementById('preloader');
-                preloader.style.opacity = '0'; // Уменьшаем непрозрачность
-                setTimeout(() => {
-                    preloader.style.display = 'none'; // Убираем прелоадер после анимации
-                }, 4500); // Задержка для плавного исчезновения
-            }, 4000); // Задержка для плавного исчезновения
+            // Проверяем подписку сразу после загрузки
+            checkSubscription();
         };
     </script>
 </body>
