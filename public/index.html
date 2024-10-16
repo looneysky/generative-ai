@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <title>AI Image Generator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,17 +13,17 @@
 <body>
     <div id="preloader">
         <div class="loader-text">
-            PHOTO AI
+            PHOTOLIGHT
         </div>
         <div class="premium-edition-light">
-            PREMIUM EDITION
+            BASIC EDITION
         </div>
     </div>
     <div class="app-container">
         <header>
             <h1>PHOTOLIGHT AI</h1>
             <div class="premium-edition">
-                PREMIUM EDITION
+                BASIC EDITION
             </div>
         </header>
 
@@ -46,13 +47,19 @@
         let timeout;
 
         function debounceGenerateImage(event) {
-            // Clear previous timeout if any
-            clearTimeout(timeout);
-            // Set a new timeout to call generateImage after 300ms
+        // Clear previous timeout if any
+        clearTimeout(timeout);
+
+        // Check if the key pressed is a spacebar (keyCode 32)
+        if (event.keyCode === 32) {
+            generateImage(); // Trigger immediately if spacebar is pressed
+        } else {
+            // Set a new timeout to call generateImage after 3 seconds of inactivity
             timeout = setTimeout(() => {
                 generateImage();
-            }, 300);
+            }, 3000); // 3000ms = 3 seconds
         }
+    }
 
         async function generateImage() {
             const prompt = document.getElementById('promptInput').value;

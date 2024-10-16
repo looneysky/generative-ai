@@ -3,11 +3,12 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Arial', sans-serif;
+  color: #a7a7a7;
+  font-family: 'Roboto', sans-serif;
 }
 
 body {
-  background-color: #1a1a1a;
+  background-color: #efefef;
   color: #fff;
   display: flex;
   justify-content: center;
@@ -21,24 +22,22 @@ body {
   background-color: #2a2a2a;
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  height: 100vh; /* Контейнер занимает всю высоту */
 }
 
 /* Header */
 header {
-  background-color: #333;
+  background-color: #ffffff;
   padding: 15px;
   text-align: center;
   color: #fff;
   font-size: 22px;
-  border-bottom: 2px solid #444;
   position: relative;
+  z-index: 100;
 }
 
 .premium-edition {
-  background-color: #f9b817; /* Цвет фона - золотой */
+  background-color: #17f93d; /* Цвет фона - золотой */
   color: #fff; /* Цвет текста - белый */
   border-radius: 10px; /* Радиус границы */
   padding: 8px 12px; /* Отступы */
@@ -49,7 +48,7 @@ header {
 }
 
 .premium-edition-light {
-  background-color: #f9b817; /* Цвет фона - золотой */
+  background-color: #17f93d; /* Цвет фона - золотой */
   color: #fff; /* Цвет текста - белый */
   border-radius: 10px; /* Радиус границы */
   padding: 8px 12px; /* Отступы */
@@ -58,15 +57,16 @@ header {
   font-size: 16px; /* Размер шрифта */
   display: inline-block; /* Внутренний блок для ширины текста */
 }
-
 /* Main content */
 main {
-  padding: 15px;
+  padding: 15px 15px 65px;
+  background-color: #e9e9e9;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  flex-grow: 1; /* Это позволит main занимать все оставшееся пространство */
+  overflow-y: auto; /* Чтобы можно было прокручивать контент при необходимости */
 }
 
 .image-container {
@@ -74,8 +74,8 @@ main {
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 60vh; /* Это обеспечивает центрирование изображения */
-  background-color: #444;
+  height: 100%; /* Это обеспечивает центрирование изображения */
+  background-color: #ffffff;
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 15px;
@@ -95,20 +95,29 @@ main {
 }
 
 .input-container {
+  position: fixed; /* Зафиксируем внизу */
+  bottom: 80px; /* Отступ от футера, если нужно */
+  left: 0;
   width: 100%;
+  max-width: 480px; /* Подстраиваем под размер app-container */
+  padding: 0 15px; /* Добавим отступы */
+  background-color: #e9e9e9; /* Цвет фона контейнера */
+  z-index: 99; /* Чтобы было над контентом */
+  margin-block-end: 15px
 }
 
 input[type="text"] {
   width: 100%;
   padding: 15px;
-  border: 2px solid #555;
+  border: 0px solid #ffffff;
   border-radius: 8px;
-  background-color: #333;
+  background-color: #ffffff;
   color: #fff;
   font-size: 16px;
   outline: none;
   transition: border-color 0.3s;
 }
+
 
 input[type="text"]::placeholder {
   color: #888;
@@ -120,17 +129,19 @@ input[type="text"]:focus {
 
 /* Footer */
 footer {
+  position: relative;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   padding: 15px;
-  background-color: #333;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3);
+  background-color: #ffffff;
   display: flex;
   justify-content: center;
-  width: 100%;
 }
 
 button {
-  background-color: #555;
-  color: #fff;
+  background-color: #ededed;
+  color: #000000;
   border: none;
   padding: 15px 30px;
   border-radius: 8px;
@@ -154,7 +165,7 @@ button:active {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #444;
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -163,13 +174,14 @@ button:active {
 }
 
 .loader-text, .premium-edition-light {
-  color: white;
+  color: #000000;
   font-size: 2rem; /* Размер текста */
   animation: blink 5s infinite; /* Мигающий эффект */
 }
 
 .premium-edition-light {
   font-size: 1.5rem; /* Размер текста для Premium Edition */
+  color: #fff;
 }
 
 @keyframes blink {
