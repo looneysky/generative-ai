@@ -112,7 +112,7 @@ input[type="text"] {
   border: 0px solid #ffffff;
   border-radius: 8px;
   background-color: #ffffff;
-  color: #fff;
+  color: #000;
   font-size: 16px;
   outline: none;
   transition: border-color 0.3s;
