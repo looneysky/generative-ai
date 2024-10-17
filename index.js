@@ -447,11 +447,11 @@ bot.on('callback_query', async (query) => {
 
     // Далее обработка выбора
     else if (query.data === 'premium_1_month') {
-        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
+        await bot.sendMessage(userId, 'Для оплаты продукта переведите 199р на карту: 4048 4150 1147 9926');
     } else if (query.data === 'premium_6_months') {
-        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
+        await bot.sendMessage(userId, 'Для оплаты продукта переведите 399р на карту: 4048 4150 1147 9926');
     } else if (query.data === 'premium_1_year') {
-        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
+        await bot.sendMessage(userId, 'Для оплаты продукта переведите 899р на карту: 4048 4150 1147 9926');
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
