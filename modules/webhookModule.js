@@ -114,7 +114,7 @@ app.post('/webhook', (req, res) => {
         expireDate.setMonth(expireDate.getMonth() + 1); // 1 месяц
     } else if (amount === '399.00') {
         expireDate.setMonth(expireDate.getMonth() + 6); // 6 месяцев
-    } else if (amount === '599.00') {
+    } else if (amount === '899.00') {
         expireDate.setFullYear(expireDate.getFullYear() + 1); // 1 год
     } else {
         return res.status(400).send('Invalid amount');

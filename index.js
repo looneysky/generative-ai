@@ -437,7 +437,7 @@ bot.on('callback_query', async (query) => {
                 inline_keyboard: [
                     [{ text: '1 месяц - 199 рублей', callback_data: 'premium_1_month' }],
                     [{ text: '6 месяцев - 399 рублей', callback_data: 'premium_6_months' }],
-                    [{ text: '1 год - 599 рублей', callback_data: 'premium_1_year' }]
+                    [{ text: '1 год - 899 рублей', callback_data: 'premium_1_year' }]
                 ]
             })
         };
@@ -451,7 +451,7 @@ bot.on('callback_query', async (query) => {
     } else if (query.data === 'premium_6_months') {
         await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 6 месяцев, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=399&userId=' + userId);
     } else if (query.data === 'premium_1_year') {
-        await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 год, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=599&userId=' + userId);
+        await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 год, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=899&userId=' + userId);
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
