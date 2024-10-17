@@ -260,19 +260,6 @@ bot.on('message', async (msg) => {
                     });
                     return;
                 } else {
-                    if (containsForbiddenWords(translatedText) === true) {
-                        bot.sendMessage(userId, '😵 Используя данную модель можно генерировать контент 18+ только по подписке.', {
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [
-                                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
-                                        { text: '💳 Купить премиум', callback_data: 'buy_premium' }
-                                    ]
-                                ]
-                            }
-                        })
-                        return;
-                    }
                     // Увеличиваем количество попыток
                     users[userId].attemps += 1;
                     saveUsers(users);
@@ -530,7 +517,7 @@ bot.on('callback_query', async (query) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: `🎉 Вот ваша генерация по запросу:\n\n"${prompt}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
+                caption: `🎉 Вот ваша генерация по запросу:\n\n"${prompt}"\n\n💬 Наш чат: https://t.me/+ZWOwCCIIhBdkODQy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
                 reply_markup: {
                     inline_keyboard: [[
                         {
