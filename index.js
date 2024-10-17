@@ -447,11 +447,11 @@ bot.on('callback_query', async (query) => {
 
     // Далее обработка выбора
     else if (query.data === 'premium_1_month') {
-        await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 месяц, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=199&userId=' + userId);
+        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
     } else if (query.data === 'premium_6_months') {
-        await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 6 месяцев, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=399&userId=' + userId);
+        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
     } else if (query.data === 'premium_1_year') {
-        await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 год, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=899&userId=' + userId);
+        await bot.sendMessage(userId, 'Замечены временные сбои в автоматической системе оплаты\n По покупке обращаться: @webadmin11');
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
