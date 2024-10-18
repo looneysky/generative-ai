@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
+const axios = require('axios');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
 const { createImage } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
