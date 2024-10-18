@@ -149,8 +149,8 @@ async function createImage(prompt, userId) {
                         sampler: sampler !== null ? sampler : undefined, // Добавляем семплер, если он не равен null
                         lora: lora !== null ? lora : undefined // Добавляем lora, если он не равен null
                     }];
-                    
-                    console.log(imageRequest);                    
+
+                    console.log(imageRequest);
 
                     // Отправляем запрос                    
                     ws.send(JSON.stringify(imageRequest));
@@ -247,7 +247,7 @@ bot.on('message', async (msg) => {
         if (selectedModel != 'Free V1') {
             if (users[userId].premium.isPremium === false) {
                 // Проверяем количество попыток
-                if (users[userId].attemps >= 5) {
+                if (users[userId].attemps >= 3) {
                     bot.sendMessage(userId, 'Ваш лимит попыток исчерпан.\nПопробуйте снова через ' + getTimeUntilReset() + ' или обновите до премиум-версии для неограниченного доступа.', {
                         reply_markup: {
                             inline_keyboard: [
@@ -260,6 +260,19 @@ bot.on('message', async (msg) => {
                     });
                     return;
                 } else {
+                    if (containsForbiddenWords(translatedText) === true) {
+                        bot.sendMessage(userId, '😵 Используя данную модель можно генерировать контент 18+ только по подписке.', {
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [
+                                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
+                                        { text: '💳 Купить премиум', callback_data: 'buy_premium' }
+                                    ]
+                                ]
+                            }
+                        })
+                        return;
+                    }
                     // Увеличиваем количество попыток
                     users[userId].attemps += 1;
                     saveUsers(users);
