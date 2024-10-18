@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users List</title>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #343a40;
+            margin-bottom: 40px;
+        }
+
+        #search {
+            display: block;
+            margin: 0 auto 30px auto;
+            padding: 15px;
+            width: 50%;
+            font-size: 18px;
+            border: 2px solid #007bff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        #search:focus {
+            border-color: #0056b3;
+            outline: none;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #users-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .user-block {
+            background-color: #ffffff;
+            border: 2px solid #f1f1f1;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative; /* Added for pseudo-element positioning */
+        }
+
+        .user-block:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            background-size: contain;
+            align-items: center;
+            font-size: 36px;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .user-id {
+            font-size: 22px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+            text-decoration: none;
+        }
+
+        p {
+            font-size: 16px;
+            color: #495057;
+            margin: 5px 0;
+        }
+
+        .user-info {
+            margin-bottom: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+        }
+
+        .premium-badge {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .no-results {
+            text-align: center;
+            font-size: 22px;
+            color: #888;
+            margin-top: 20px;
+        }
+
+        /* Loading spinner styles */
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 20px auto;
+        }
+
+        #loading:before {
+            content: '';
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            #users-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            #users-container {
+                grid-template-columns: 1fr;
+            }
+
+            #search {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Users List</h1>
+    <input type="text" id="search" placeholder="Search by User ID...">
+    <div id="loading">Loading...</div>
+    <div id="users-container"></div>
+    <div class="no-results" id="no-results" style="display: none;">No users found.</div>
+
+    <script>
+        let page = 1;
+        let isLoading = false;
+        let usersData = []; // Store the fetched user data
+
+        async function loadUsers() {
+            if (isLoading) return;
+            isLoading = true;
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/users?page=${page}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const users = await response.json();
+                usersData = users; // Store users for filtering
+
+                if (users.length === 0) {
+                    document.getElementById('no-results').style.display = 'block';
+                } else {
+                    document.getElementById('no-results').style.display = 'none';
+                }
+
+                users.forEach(async user => {
+                    const userBlock = document.createElement('div');
+                    userBlock.classList.add('user-block');
+
+                    const avatarResponse = await fetch(`/api/user/avatar/${user.userId}`);
+                    const avatarData = await avatarResponse.json();
+
+                    const avatarUrl = avatarData.avatarUrl;
+
+                    // Generate random gradient
+                    const randomGradient = () => {
+                        const randomColor = () => Math.floor(Math.random() * 256);
+                        return `linear-gradient(135deg, rgb(${randomColor()}, ${randomColor()}, ${randomColor()}) 0%, rgb(${randomColor()}, ${randomColor()}, ${randomColor()}) 100%)`;
+                    };
+
+                    // Fetch user name and surname
+                    const userNameResponse = await fetch(`/api/user/name/${user.userId}`);
+                    const userNameData = await userNameResponse.json();
+                    const fullName = `${userNameData.firstName} ${userNameData.lastName}`;
+                    const telegramLink = `https://t.me/${userNameData.username}`;
+
+                    // Get first letter of nickname
+                    const firstLetter = userNameData.firstName ? userNameData.firstName[0].toUpperCase() : 'U';
+
+                    // Create avatar HTML
+                    const avatarHTML = avatarUrl
+                        ? `<div class="user-avatar" style="background-image: url('${avatarUrl}');"></div>`
+                        : `<div class="user-avatar" style="background: ${randomGradient()};">${firstLetter}</div>`;
+
+                    userBlock.innerHTML = `
+                        ${avatarHTML}
+                        <a href="${telegramLink}" class="user-id" target="_blank">${fullName}</a>
+                        <div class="user-info"><strong>Attempts:</strong> ${user.attemps}</div>
+                        <div class="user-info"><strong>Model:</strong> ${user.model}</div>
+                        <div class="user-info"><strong>Premium:</strong> ${user.premium.isPremium ? 'Yes' : 'No'}</div>
+                    `;
+
+                    document.getElementById('users-container').appendChild(userBlock);
+                });
+
+                page++;
+            } catch (error) {
+                console.error('Error loading users:', error);
+                alert('There was an error loading the users. Please try again later.'); // Show user-friendly error
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                isLoading = false;
+            }
+        }
+
+        // Initialize user loading on page load
+        loadUsers();
+
+        // Infinite scrolling
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+                loadUsers();
+            }
+        });
+
+        document.getElementById('search').addEventListener('input', (event) => {
+            const searchTerm = event.target.value.toLowerCase();
+            const filteredUsers = usersData.filter(user => user.userId.toString().toLowerCase().includes(searchTerm));
+            renderUsers(filteredUsers);
+        });
+
+        function renderUsers(users) {
+            document.getElementById('users-container').innerHTML = ''; // Clear current user blocks
+
+            if (users.length === 0) {
+                document.getElementById('no-results').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('no-results').style.display = 'none'; // Hide no results message
+
+            users.forEach(user => {
+                const userBlock = document.createElement('div');
+                userBlock.classList.add('user-block');
+                userBlock.innerHTML = `
+                    <div class="user-id">${user.userId}</div>
+                    <div class="user-info"><strong>Attempts:</strong> ${user.attemps}</div>
+                    <div class="user-info"><strong>Model:</strong> ${user.model}</div>
+                    <div class="user-info"><strong>Premium:</strong> ${user.premium.isPremium ? 'Yes' : 'No'}</div>
+                `;
+                document.getElementById('users-container').appendChild(userBlock);
+            });
+        }
+    </script>
+</body>
+
+</html>

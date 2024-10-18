@@ -232,9 +232,6 @@ bot.on('message', async (msg) => {
             console.log('New user');
         }
 
-        // Проверяем, если у пользователя уже выбрана модель
-        const selectedModel = users[userId].model; // По умолчанию 'Free V1', если модель не выбрана
-
         let translatedText;
         await translatte(msg.text, { to: 'en' }).then(res => {
             translatedText = res.text;
@@ -244,11 +241,23 @@ bot.on('message', async (msg) => {
             console.error(err);
         });
 
-        if (selectedModel != 'Free V1') {
-            if (users[userId].premium.isPremium === false) {
-                // Проверяем количество попыток
-                if (users[userId].attemps >= 3) {
-                    bot.sendMessage(userId, 'Ваш лимит попыток исчерпан.\nПопробуйте снова через ' + getTimeUntilReset() + ' или обновите до премиум-версии для неограниченного доступа.', {
+        if (users[userId].premium.isPremium === false) {
+            // Проверяем количество попыток
+            if (users[userId].attemps >= 3) {
+                bot.sendMessage(userId, 'Ваш лимит попыток исчерпан.\nПопробуйте снова через ' + getTimeUntilReset() + ' или обновите до премиум-версии для неограниченного доступа.', {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: '🔄 Сменить модель', callback_data: 'change_model' },
+                                { text: '💳 Купить премиум', callback_data: 'buy_premium' }
+                            ]
+                        ]
+                    }
+                });
+                return;
+            } else {
+                if (containsForbiddenWords(translatedText) === true) {
+                    bot.sendMessage(userId, '😵 Используя данную модель можно генерировать контент 18+ только по подписке.', {
                         reply_markup: {
                             inline_keyboard: [
                                 [
@@ -257,26 +266,12 @@ bot.on('message', async (msg) => {
                                 ]
                             ]
                         }
-                    });
+                    })
                     return;
-                } else {
-                    if (containsForbiddenWords(translatedText) === true) {
-                        bot.sendMessage(userId, '😵 Используя данную модель можно генерировать контент 18+ только по подписке.', {
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [
-                                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
-                                        { text: '💳 Купить премиум', callback_data: 'buy_premium' }
-                                    ]
-                                ]
-                            }
-                        })
-                        return;
-                    }
-                    // Увеличиваем количество попыток
-                    users[userId].attemps += 1;
-                    saveUsers(users);
                 }
+                // Увеличиваем количество попыток
+                users[userId].attemps += 1;
+                saveUsers(users);
             }
         }
 
@@ -393,7 +388,7 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(userId, 'Выберите модель:', {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'Free V1', callback_data: 'set_free_v1' }],
+                    [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
                     [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
                 ]
@@ -428,7 +423,7 @@ bot.on('callback_query', async (query) => {
         }
         users[userId].model = "Free V1";
         saveUsers(users);
-        await bot.sendMessage(userId, `✅ Модель изменена на "Free V1"`);
+        await bot.sendMessage(userId, `✅ Модель изменена на "FastFlux V1"`);
     } else if (query.data === 'set_premium_v2') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist

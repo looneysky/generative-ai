@@ -177,6 +177,88 @@ app.get('/api/getUsers', (req, res) => {
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, '/../public')));
 
+// Маршрут для получения пользователей (по страницам)
+app.get('/api/users', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;  // Количество пользователей на страницу
+    const startIndex = (page - 1) * limit;
+
+    try {
+        const response = await axios.get('http://test-project-generative-ai-v2.3gpeil.easypanel.host/api/getUsers');
+        const users = response.data;
+
+        // Получаем пользователей для текущей страницы
+        const paginatedUsers = Object.entries(users).slice(startIndex, startIndex + limit).map(([userId, userData]) => ({
+            userId,
+            ...userData
+        }));
+
+        res.json(paginatedUsers);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).send('Error fetching users.');
+    }
+});
+
+// Добавление нового маршрута для получения имени, фамилии и имени пользователя по ID
+app.get('/api/user/name/:userId', async (req, res) => {
+    const userId = req.params.userId;
+
+    try {
+        // Запрос к Telegram API для получения информации о пользователе
+        const response = await axios.get(`https://api.telegram.org/bot7854713233:AAF9RQw1LFTOAC_Y5jfz4gax9AnwzSgT6ZE/getChat?chat_id=${userId}`);
+        const userData = response.data.result;
+
+        // Возвращаем имя, фамилию и имя пользователя
+        res.json({
+            firstName: userData.first_name || '',
+            lastName: userData.last_name || '',
+            username: userData.username || ''
+        });
+    } catch (error) {
+        console.error('Error fetching user name:', error);
+        res.status(500).send('Error fetching user name.');
+    }
+});
+
+// Получение аватара пользователя через Telegram API
+app.get('/api/user/avatar/:userId', async (req, res) => {
+    const userId = req.params.userId;
+
+    try {
+        const avatarUrl = await getTelegramAvatar(userId);
+        res.json({ avatarUrl });
+    } catch (error) {
+        console.error('Error fetching avatar:', error);
+        res.status(500).send('Error fetching avatar.');
+    }
+});
+
+// Функция для получения URL аватара через Telegram API
+async function getTelegramAvatar(userId) {
+    try {
+        const response = await axios.get(`https://api.telegram.org/bot7854713233:AAF9RQw1LFTOAC_Y5jfz4gax9AnwzSgT6ZE/getUserProfilePhotos?user_id=${userId}`);
+        const photos = response.data.result.photos;
+
+        if (photos && photos.length > 0) {
+            const photo = photos[0][0].file_id;
+            const fileResponse = await axios.get(`https://api.telegram.org/bot7854713233:AAF9RQw1LFTOAC_Y5jfz4gax9AnwzSgT6ZE/getFile?file_id=${photo}`);
+            const filePath = fileResponse.data.result.file_path;
+            return `https://api.telegram.org/file/bot7854713233:AAF9RQw1LFTOAC_Y5jfz4gax9AnwzSgT6ZE/${filePath}`;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error fetching avatar:', error);
+        return null;
+    }
+}
+
+// Маршрут для главной страницы (index.html)
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '/../public', 'admin.html'));
+});
+
 // Define a route that serves the index.html file automatically
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/../public', 'index.html'));
