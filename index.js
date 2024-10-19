@@ -72,14 +72,35 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
+// Функция для проверки пользователя и получения userKey
+async function verifyUser() {
+    const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
+    
+    try {
+        const response = await axios.get(verifyUrl);
+        console.log('Ответ от API верификации:', response.data);
+
+        if (response.data.status === 'success' && response.data.userKey) {
+            return response.data.userKey; // Вернем userKey
+        } else {
+            throw new Error('Не удалось получить userKey из ответа');
+        }
+    } catch (error) {
+        console.error('Ошибка при запросе верификации пользователя:', error.message);
+        throw error;
+    }
+}
+
 async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
+    const userKey = await verifyUser(); // Получаем userKey
+
     const connectAndGenerateImage = async () => {
         console.log('Отправляем запрос на генерацию изображения...');
-        
-        const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=21c0410d6c167b688d7058b2a2d4bdd67d99a3121da47ceb0be4af8c547d59dc&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+
+        const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
         
         try {
             const response = await axios.get(requestUrl);
