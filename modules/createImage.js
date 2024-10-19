@@ -11,8 +11,12 @@ async function verifyUser() {
         const response = await axios.get(verifyUrl);
         console.log('Ответ от API верификации:', response.data);
 
+        // Проверка на успешный статус и наличие userKey
         if (response.data.status === 'success' && response.data.userKey) {
             return response.data.userKey; // Вернем userKey
+        } else if (response.data.status === 'already_verified') {
+            // Если пользователь уже верифицирован, возвращаем userKey из ответа
+            return response.data.userKey; // userKey тоже будет в ответе
         } else {
             throw new Error('Не удалось получить userKey из ответа');
         }
@@ -26,7 +30,8 @@ async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
-    const userKey = await verifyUser(); // Получаем userKey
+    // Получаем userKey
+    const userKey = await verifyUser();
 
     const connectAndGenerateImage = async () => {
         console.log('Отправляем запрос на генерацию изображения...');
@@ -37,6 +42,7 @@ async function createImage(prompt, userId) {
             const response = await axios.get(requestUrl);
             console.log('Ответ от API:', response.data);
 
+            // Проверка на успешный статус и наличие imageId
             if (response.data.status === 'success' && response.data.imageId) {
                 const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
                 console.log('Изображение успешно сгенерировано. URL:', imageUrl);
