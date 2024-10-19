@@ -104,7 +104,7 @@
       "model": "Premium V1"
   },
   "628899392": {
-      "attemps": 1,
+      "attemps": 0,
       "premium": {
           "isPremium": false,
           "expire": null
@@ -120,6 +120,14 @@
       "model": "Premium V1"
   },
   "673561179": {
+      "attemps": 0,
+      "premium": {
+          "isPremium": false,
+          "expire": null
+      },
+      "model": "Premium V1"
+  },
+  "694101689": {
       "attemps": 0,
       "premium": {
           "isPremium": false,
@@ -167,6 +175,14 @@
       },
       "model": "Premium V1"
   },
+  "767931125": {
+      "attemps": 3,
+      "premium": {
+          "isPremium": false,
+          "expire": null
+      },
+      "model": "Premium V1"
+  },
   "793896352": {
       "attemps": 0,
       "premium": {
@@ -177,6 +193,14 @@
   },
   "801474856": {
       "attemps": 0,
+      "premium": {
+          "isPremium": false,
+          "expire": null
+      },
+      "model": "Premium V1"
+  },
+  "818558728": {
+      "attemps": 3,
       "premium": {
           "isPremium": false,
           "expire": null
@@ -213,7 +237,7 @@
           "isPremium": true,
           "expire": "2024-11-11T18:09:35.354Z"
       },
-      "model": "Premium V1"
+      "model": "Premium V2"
   },
   "884480304": {
       "attemps": 0,
@@ -312,7 +336,7 @@
       "model": "Premium V1"
   },
   "1039246090": {
-      "attemps": 3,
+      "attemps": 0,
       "premium": {
           "isPremium": false,
           "expire": null
@@ -512,7 +536,7 @@
       "model": "Premium V1"
   },
   "1657398231": {
-      "attemps": 3,
+      "attemps": 0,
       "premium": {
           "isPremium": false,
           "expire": null
@@ -1634,7 +1658,15 @@
       "model": "Premium V1"
   },
   "5047459027": {
-      "attemps": 1,
+      "attemps": 0,
+      "premium": {
+          "isPremium": false,
+          "expire": null
+      },
+      "model": "Premium V1"
+  },
+  "5599176851": {
+      "attemps": 3,
       "premium": {
           "isPremium": false,
           "expire": null

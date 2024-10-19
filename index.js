@@ -72,6 +72,45 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
+// Функция для выполнения POST-запроса
+async function generateImageWithBackup(prompt) {
+    const url = 'https://aiimagegenerator.io/api/model/predict-peach';
+
+    const data = {
+        prompt: prompt,
+        negativePrompt: "",
+        key: "Cinematic",
+        width: 1024,
+        height: 1024,
+        quantity: 1,
+        size: "1024x1024"
+    };
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': 'https://aiimagegenerator.io',
+        'Referer': 'https://aiimagegenerator.io/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'
+    };
+
+    try {
+        // Выполнение POST-запроса
+        const response = await axios.post(url, data, { headers });
+        
+        // Проверка успешного выполнения запроса
+        if (response.status === 200 && response.data.code === 0) {
+            const imageUrl = response.data.data.url; // Получаем URL изображения
+            console.log('Изображение успешно сгенерировано:', imageUrl);
+            return imageUrl;
+        } else {
+            throw new Error('Не удалось сгенерировать изображение: ' + response.data.message);
+        }
+    } catch (error) {
+        console.error('Ошибка при выполнении запроса:', error.message);
+    }
+}
+
 // Функция для проверки пользователя и получения userKey
 async function verifyUser() {
     const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
@@ -130,13 +169,7 @@ async function createImage(prompt, userId) {
             return await connectAndGenerateImage();
         } catch (error) {
             console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
-            attempt += 1;
-
-            if (attempt < maxRetries) {
-                console.log(`Переотправка запроса... (${attempt}/${maxRetries})`);
-            } else {
-                throw new Error('Не удалось сгенерировать изображение после 3 попыток.');
-            }
+            generateImageWithBackup(prompt)
         }
     }
 }

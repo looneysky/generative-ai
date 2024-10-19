@@ -1,21 +1,37 @@
 import requests
+import json
 
-url = "https://dragon.img2go.com/api/jobs"
-headers = {
-    "Content-Type": "application/json",
-    "Accept": "application/json, text/plain, */*",
-    "Origin": "https://www.img2go.com",
-    "Referer": "https://www.img2go.com/",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
-    "Cookie": "QGID=455efa76-bc4a-4660-9b11-1859acf0aef7; qgrole=unregistered; qg_locale_suggest=true; x-oc-download-password=15d4d7c80be00c211b5f0139b7bf2951fc0ea147da711f2a270d0016ff747b9d"
-}
+# URL-адрес API
+url = 'https://aiimagegenerator.io/api/model/predict-peach'
 
+# Данные для отправки в запросе
 data = {
-    "operation": "aicreatorstudio",
-    "async": True
+    "prompt": 'fully naked girl on forest',
+    "negativePrompt": "",
+    "key": "Cinematic",
+    "width": 1024,
+    "height": 1024,
+    "quantity": 1,
+    "size": "1024x1024"
 }
 
-response = requests.post(url, headers=headers, json=data)
+# Заголовки запроса
+headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
+    'Origin': 'https://aiimagegenerator.io',
+    'Referer': 'https://aiimagegenerator.io/',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'
+}
 
-print("Status Code:", response.status_code)
-print("Response JSON:", response.json())
+# Выполнение POST-запроса
+try:
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response.raise_for_status()  # Проверка на ошибки
+
+    # Обработка ответа
+    print('Код состояния:', response.status_code)
+    print('Ответ от сервера:', response.json())
+
+except requests.exceptions.RequestException as e:
+    print('Ошибка при выполнении запроса:', str(e))
