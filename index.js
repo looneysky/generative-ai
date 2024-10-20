@@ -72,7 +72,6 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
-// Функция для выполнения POST-запроса
 async function generateImageWithBackup(prompt) {
     const url = 'https://aiimagegenerator.io/api/model/predict-peach';
 
@@ -95,12 +94,10 @@ async function generateImageWithBackup(prompt) {
     };
 
     try {
-        // Выполнение POST-запроса
         const response = await axios.post(url, data, { headers });
-        
-        // Проверка успешного выполнения запроса
+
         if (response.status === 200 && response.data.code === 0) {
-            const imageUrl = response.data.data.url; // Получаем URL изображения
+            const imageUrl = response.data.data.url;
             console.log('Изображение успешно сгенерировано:', imageUrl);
             return imageUrl;
         } else {
@@ -108,10 +105,10 @@ async function generateImageWithBackup(prompt) {
         }
     } catch (error) {
         console.error('Ошибка при выполнении запроса:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
     }
 }
 
-// Функция для проверки пользователя и получения userKey
 async function verifyUser() {
     const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
     
@@ -119,18 +116,16 @@ async function verifyUser() {
         const response = await axios.get(verifyUrl);
         console.log('Ответ от API верификации:', response.data);
 
-        // Проверка на успешный статус и наличие userKey
         if (response.data.status === 'success' && response.data.userKey) {
-            return response.data.userKey; // Вернем userKey
+            return response.data.userKey;
         } else if (response.data.status === 'already_verified') {
-            // Если пользователь уже верифицирован, возвращаем userKey из ответа
-            return response.data.userKey; // userKey тоже будет в ответе
+            return response.data.userKey;
         } else {
             throw new Error('Не удалось получить userKey из ответа');
         }
     } catch (error) {
         console.error('Ошибка при запросе верификации пользователя:', error.message);
-        throw error;
+        throw error; // Пробрасываем ошибку для обработки в createImage
     }
 }
 
@@ -138,41 +133,44 @@ async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
-    // Получаем userKey
-    const userKey = await verifyUser();
+    try {
+        const userKey = await verifyUser();
 
-    const connectAndGenerateImage = async () => {
-        console.log('Отправляем запрос на генерацию изображения...');
-
-        const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
-        
-        try {
+        const connectAndGenerateImage = async () => {
+            console.log('Отправляем запрос на генерацию изображения...');
+            const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+            
             const response = await axios.get(requestUrl);
             console.log('Ответ от API:', response.data);
 
-            // Проверка на успешный статус и наличие imageId
             if (response.data.status === 'success' && response.data.imageId) {
                 const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
                 console.log('Изображение успешно сгенерировано. URL:', imageUrl);
-                return imageUrl; // Вернем URL изображения
+                return imageUrl;
             } else {
                 throw new Error('Не удалось получить imageId из ответа');
             }
-        } catch (error) {
-            console.error('Ошибка при запросе к API:', error.message);
-            throw error; // Пробрасываем ошибку для повторной попытки
-        }
-    };
+        };
 
-    while (attempt < maxRetries) {
-        try {
-            return await connectAndGenerateImage();
-        } catch (error) {
-            console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
-            generateImageWithBackup(prompt)
+        while (attempt < maxRetries) {
+            try {
+                return await connectAndGenerateImage();
+            } catch (error) {
+                console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
+                attempt++;
+                if (attempt >= maxRetries) {
+                    console.error('Применяем резервный метод генерации изображения...');
+                    return await generateImageWithBackup(prompt); // Используем резервный метод
+                }
+            }
         }
+    } catch (error) {
+        console.error('Ошибка при верификации пользователя или генерации изображения:', error.message);
+        // Пытаемся использовать резервный метод сразу, если возникла ошибка
+        return await generateImageWithBackup(prompt);
     }
 }
+
 
 // Обработка команды /start
 bot.onText(/\/start/, (msg) => {
