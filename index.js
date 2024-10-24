@@ -72,126 +72,105 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
+async function generateImageWithBackup(prompt) {
+    const url = 'https://aiimagegenerator.io/api/model/predict-peach';
+
+    const data = {
+        prompt: prompt,
+        negativePrompt: "",
+        key: "Cinematic",
+        width: 1024,
+        height: 1024,
+        quantity: 1,
+        size: "1024x1024"
+    };
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': 'https://aiimagegenerator.io',
+        'Referer': 'https://aiimagegenerator.io/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+
+        if (response.status === 200 && response.data.code === 0) {
+            const imageUrl = response.data.data.url;
+            console.log('Изображение успешно сгенерировано:', imageUrl);
+            return imageUrl;
+        } else {
+            throw new Error('Не удалось сгенерировать изображение: ' + response.data.message);
+        }
+    } catch (error) {
+        console.error('Ошибка при выполнении запроса:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
+    }
+}
+
+async function verifyUser() {
+    const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
+    
+    try {
+        const response = await axios.get(verifyUrl);
+        console.log('Ответ от API верификации:', response.data);
+
+        if (response.data.status === 'success' && response.data.userKey) {
+            return response.data.userKey;
+        } else if (response.data.status === 'already_verified') {
+            return response.data.userKey;
+        } else {
+            throw new Error('Не удалось получить userKey из ответа');
+        }
+    } catch (error) {
+        console.error('Ошибка при запросе верификации пользователя:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
+    }
+}
+
 async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
-    const connectAndGenerateImage = () => {
-        return new Promise((resolve, reject) => {
-            console.log('Создаем WebSocket соединение...');
-            const ws = new WebSocket('wss://ws-api.runware.ai/v1');
-            const users = loadUsers();
-            let token;
-            let steps;
-            let width;
-            let height;
-            let sampler;
-            let lora;
-            if (users[userId].model === 'Free V1') {
-                token = runwareApi2;
-                steps = 10;
-                width = 1024;
-                height = 1024;
-            } else if (users[userId].model === 'Premium V1') {
-                token = runwareApi;
-                steps = 70;
-                width = 832;
-                height = 1216;
-                sampler = 'DPM++ SDE' // Используем семплер DPM++ SDE
+    try {
+        const userKey = await verifyUser();
+
+        const connectAndGenerateImage = async () => {
+            console.log('Отправляем запрос на генерацию изображения...');
+            const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+            
+            const response = await axios.get(requestUrl);
+            console.log('Ответ от API:', response.data);
+
+            if (response.data.status === 'success' && response.data.imageId) {
+                const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
+                console.log('Изображение успешно сгенерировано. URL:', imageUrl);
+                return imageUrl;
             } else {
-                token = runwareApi;
-                steps = 50;
-                width = 1024;
-                height = 1024;
-                lora = [
-                    {
-                        model: 'urn:air:flux1:lora:civitai:721805@843538',
-                    },
-                    {
-                        model: 'urn:air:flux1:lora:civitai:658411@736706'
-                    }
-                ]
+                throw new Error('Не удалось получить imageId из ответа');
             }
+        };
 
-            console.log(token)
-
-            ws.on('open', () => {
-                console.log('WebSocket соединение открыто. Отправляем запрос на аутентификацию...');
-                const authRequest = [{ taskType: 'authentication', apiKey: token }];
-                ws.send(JSON.stringify(authRequest));
-            });
-
-            ws.on('message', (data) => {
-                console.log(data)
-                // Преобразуем Buffer в строку
-                const text = data.toString();
-                console.log(text)
-                const response = JSON.parse(text);
-
-                // Проверяем, если у пользователя уже выбрана модель
-                const selectedModel = users[userId].model; // По умолчанию 'Free V1', если модель не выбрана
-                console.log(models[selectedModel])
-                console.log(steps)
-
-                if (response.data && response.data[0]?.taskType === 'authentication') {
-                    console.log('Аутентификация успешна. Отправляем запрос на генерацию изображения...');
-                    const imageRequest = [{
-                        positivePrompt: prompt, // Ваш хорошо сформулированный запрос
-                        model: models[selectedModel], // Основная модель
-                        steps: steps, // Увеличенное количество шагов для улучшения деталей
-                        width: width, // Ширина изображения
-                        height: height, // Высота изображения
-                        numberResults: 1, // Количество изображений
-                        outputType: ['URL'], // Формат вывода
-                        taskType: 'imageInference', // Тип задачи
-                        taskUUID: uuidv4(), // Уникальный идентификатор задачи
-                        enableHighResFix: true, // Включаем фиксацию высокого разрешения (если нужно)
-                        sampler: sampler !== null ? sampler : undefined, // Добавляем семплер, если он не равен null
-                        lora: lora !== null ? lora : undefined // Добавляем lora, если он не равен null
-                    }];
-
-                    console.log(imageRequest);
-
-                    // Отправляем запрос                    
-                    ws.send(JSON.stringify(imageRequest));
-
-                } if (response.data && response.data[0]?.taskType === 'imageInference') {
-                    console.log('Изображение успешно сгенерировано. Получаем URL...');
-                    resolve(response.data[0].imageURL);
-                    ws.close();
-                } else {
-                    console.log('Неожиданное сообщение от WebSocket:', response);
+        while (attempt < maxRetries) {
+            try {
+                return await connectAndGenerateImage();
+            } catch (error) {
+                console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
+                attempt++;
+                if (attempt >= maxRetries) {
+                    console.error('Применяем резервный метод генерации изображения...');
+                    return await generateImageWithBackup(prompt); // Используем резервный метод
                 }
-            });
-
-
-
-            ws.on('error', (err) => {
-                console.error('Произошла ошибка WebSocket:', err);
-                reject(err);
-            });
-
-            ws.on('close', (code, reason) => {
-                console.log(`WebSocket соединение закрыто. Код: ${code}, Причина: ${reason}`);
-            });
-        });
-    };
-
-    while (attempt < maxRetries) {
-        try {
-            return await connectAndGenerateImage();
-        } catch (error) {
-            console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
-            attempt += 1;
-
-            if (attempt < maxRetries) {
-                console.log(`Переотправка запроса... (${attempt}/${maxRetries})`);
-            } else {
-                throw new Error('Не удалось сгенерировать изображение после 3 попыток.');
             }
         }
+    } catch (error) {
+        console.error('Ошибка при верификации пользователя или генерации изображения:', error.message);
+        // Пытаемся использовать резервный метод сразу, если возникла ошибка
+        return await generateImageWithBackup(prompt);
     }
 }
+
 
 // Обработка команды /start
 bot.onText(/\/start/, (msg) => {
