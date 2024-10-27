@@ -122,14 +122,13 @@
     <script>
         async function checkSubscription() {
             const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-            const channelUsername = "@photoai_channel";
 
             const response = await fetch('/api/check-subscription', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ userId, channelUsername })
+                body: JSON.stringify({ userId })
             });
 
             const result = await response.json();

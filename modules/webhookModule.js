@@ -23,10 +23,14 @@ function calculateHash(params, secret) {
 // Функция для проверки подписки пользователя
 async function isUserSubscribed(userId, channelUsername) {
     try {
-        const chatMember = await bot.getChatMember(channelUsername, userId);
+        if (channelUsername != null) {
+            const chatMember = await bot.getChatMember(channelUsername, userId);
 
-        // Проверяем статус
-        return chatMember.status === 'member' || chatMember.status === 'administrator';
+            // Проверяем статус
+            return chatMember.status === 'member' || chatMember.status === 'administrator';
+        } else {
+            return true;
+        }
     } catch (error) {
         console.error('Ошибка проверки подписки:', error);
         return false; // Возвращаем false в случае ошибки
@@ -35,7 +39,8 @@ async function isUserSubscribed(userId, channelUsername) {
 
 // API для проверки подписки
 app.post('/api/check-subscription', async (req, res) => {
-    const { userId, channelUsername } = req.body;
+    const { userId } = req.body;
+    const channelUsername = channelTelegram;
 
     if (!userId || !channelUsername) {
         return res.status(400).send('userId и channelUsername обязательны');

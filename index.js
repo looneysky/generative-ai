@@ -436,6 +436,18 @@ bot.on('callback_query', async (query) => {
             }
         });
     } else if (query.data === 'language_en' || query.data === 'language_ru') {
+        if (!users[userId]) {
+            // Initialize the user object if it doesn't exist
+            users[userId] = {
+                attempts: 0,
+                premium: {
+                    isPremium: false,
+                    expire: null
+                },
+                model: "Free V1", // Default model
+                language: "en"
+            };
+        }
         // Установка нового языка
         user.language = query.data === 'language_en' ? 'en' : 'ru';
         users[userId] = user;
