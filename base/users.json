@@ -1,8 +1,8 @@
 {
   "7259949651": {
-    "attemps": 2,
+    "attemps": 0,
     "premium": {
-      "isPremium": false,
+      "isPremium": true,
       "expire": null
     },
     "model": "Premium V1",

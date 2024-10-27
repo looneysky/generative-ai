@@ -6,7 +6,7 @@ url = 'https://aiimagegenerator.io/api/model/predict-peach'
 
 # Данные для отправки в запросе
 data = {
-    "prompt": 'fully naked girl on forest',
+    "prompt": 'fully',
     "negativePrompt": "",
     "key": "Cinematic",
     "width": 1024,

@@ -9,7 +9,7 @@ const translatte = require('translatte');
 const sharp = require('sharp');
 const webhook = require('./modules/webhookModule'); // Импортируем ваш модуль
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
-const { secret, token, runwareApi, runwareApi2 } = require('./modules/configModule');
+const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
 const { containsForbiddenWords } = require('./modules/forbiddenWords');
@@ -318,13 +318,13 @@ bot.on('message', async (msg) => {
 
         console.log(`Получен запрос на генерацию изображения: ${msg.text}`);
 
-        /*const channelUsername = "@photoai_channel"
-
-        const subscribed = await isUserSubscribed(chatId, channelUsername);
-        if (!subscribed) {
-            await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelUsername}, чтобы использовать этого бота.`);
-            return;
-        }*/
+        if (channelTelegram != null) {
+            const subscribed = await isUserSubscribed(chatId, channelTelegram);
+            if (!subscribed) {
+                await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelTelegram}, чтобы использовать этого бота.`);
+                return;
+            }
+        }
 
         // Уведомление о начале генерации
         const processingMsg = await bot.sendMessage(chatId, getTranslation(user, 'generatingMessage', { text: msg.text }));
@@ -361,7 +361,7 @@ bot.on('message', async (msg) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: "Ссылка на чат" }),
+                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: chatTelegram }),
                 reply_markup: {
                     inline_keyboard: [[
                         {
@@ -494,9 +494,9 @@ bot.on('callback_query', async (query) => {
         const options = {
             reply_markup: JSON.stringify({
                 inline_keyboard: [
-                    [{ text: getTranslation(user, 'onemonthSubs', { price: "199" }), callback_data: 'premium_1_month' }],
-                    [{ text: getTranslation(user, 'monthsSubs', { price: "399" }), callback_data: 'premium_6_months' }],
-                    [{ text: getTranslation(user, 'yearSubs', { price: "899" }), callback_data: 'premium_1_year' }]
+                    [{ text: getTranslation(user, 'onemonthSubs', { price: priceMonth }), callback_data: 'premium_1_month' }],
+                    [{ text: getTranslation(user, 'monthsSubs', { price: priceMonths }), callback_data: 'premium_6_months' }],
+                    [{ text: getTranslation(user, 'yearSubs', { price: priceYear }), callback_data: 'premium_1_year' }]
                 ]
             })
         };
@@ -506,11 +506,11 @@ bot.on('callback_query', async (query) => {
 
     // Далее обработка выбора
     else if (query.data === 'premium_1_month') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "199" }));
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceMonth }));
     } else if (query.data === 'premium_6_months') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "399" }));
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceMonths }));
     } else if (query.data === 'premium_1_year') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "899" }));
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceYear }));
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
@@ -577,7 +577,7 @@ bot.on('callback_query', async (query) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: "Ссылка на чат" }),
+                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: chatTelegram }),
                 reply_markup: {
                     inline_keyboard: [[
                         {

@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const axios = require('axios');
+const { priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./configModule');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
 const { createImage } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
@@ -111,11 +112,11 @@ app.post('/webhook', (req, res) => {
     }
 
     // Увеличиваем срок действия премиума в зависимости от суммы
-    if (amount === '199.00') {
+    if (amount === priceMonth) {
         expireDate.setMonth(expireDate.getMonth() + 1); // 1 месяц
-    } else if (amount === '399.00') {
+    } else if (amount === priceMonths) {
         expireDate.setMonth(expireDate.getMonth() + 6); // 6 месяцев
-    } else if (amount === '899.00') {
+    } else if (amount === priceYear) {
         expireDate.setFullYear(expireDate.getFullYear() + 1); // 1 год
     } else {
         return res.status(400).send('Invalid amount');
