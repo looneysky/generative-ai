@@ -25,6 +25,7 @@ function getTranslation(user, key, params = {}) {
         message = message.replace(`{${param}}`, params[param]);
     });
 
+    return message;
 }
 
 let prompts = {}; // Объект для хранения запросов по индексам
