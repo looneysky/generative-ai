@@ -13,6 +13,20 @@ const { secret, token, runwareApi, runwareApi2 } = require('./modules/configModu
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
 const { containsForbiddenWords } = require('./modules/forbiddenWords');
+const translations = require('./modules/languagesPack');
+
+// Функция для получения сообщения на нужном языке
+function getTranslation(user, key, params = {}) {
+    const language = user.language || 'en';
+    let message = translations[language][key] || translations['en'][key];
+
+    // Замена параметров, таких как {text}, {time}, {channel} и т.д.
+    Object.keys(params).forEach(param => {
+        message = message.replace(`{${param}}`, params[param]);
+    });
+
+    return message;
+}
 
 let prompts = {}; // Объект для хранения запросов по индексам
 
@@ -72,10 +86,71 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
+<<<<<<< Updated upstream
+=======
+async function generateImageWithBackup(prompt) {
+    const url = 'https://aiimagegenerator.io/api/model/predict-peach';
+
+    const data = {
+        prompt: prompt,
+        negativePrompt: "",
+        key: "Cinematic",
+        width: 1024,
+        height: 1024,
+        quantity: 1,
+        size: "1024x1024"
+    };
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Origin': 'https://aiimagegenerator.io',
+        'Referer': 'https://aiimagegenerator.io/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+
+        if (response.status === 200 && response.data.code === 0) {
+            const imageUrl = response.data.data.url;
+            console.log('Изображение успешно сгенерировано:', imageUrl);
+            return imageUrl;
+        } else {
+            throw new Error('Не удалось сгенерировать изображение: ' + response.data.message);
+        }
+    } catch (error) {
+        console.error('Ошибка при выполнении запроса:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
+    }
+}
+
+async function verifyUser() {
+    const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
+
+    try {
+        const response = await axios.get(verifyUrl);
+        console.log('Ответ от API верификации:', response.data);
+
+        if (response.data.status === 'success' && response.data.userKey) {
+            return response.data.userKey;
+        } else if (response.data.status === 'already_verified') {
+            return response.data.userKey;
+        } else {
+            throw new Error('Не удалось получить userKey из ответа');
+        }
+    } catch (error) {
+        console.error('Ошибка при запросе верификации пользователя:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
+    }
+}
+
+>>>>>>> Stashed changes
 async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
+<<<<<<< Updated upstream
     const connectAndGenerateImage = () => {
         return new Promise((resolve, reject) => {
             console.log('Создаем WebSocket соединение...');
@@ -97,6 +172,22 @@ async function createImage(prompt, userId) {
                 width = 832;
                 height = 1216;
                 sampler = 'DPM++ SDE' // Используем семплер DPM++ SDE
+=======
+    try {
+        const userKey = await verifyUser();
+
+        const connectAndGenerateImage = async () => {
+            console.log('Отправляем запрос на генерацию изображения...');
+            const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+
+            const response = await axios.get(requestUrl);
+            console.log('Ответ от API:', response.data);
+
+            if (response.data.status === 'success' && response.data.imageId) {
+                const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
+                console.log('Изображение успешно сгенерировано. URL:', imageUrl);
+                return imageUrl;
+>>>>>>> Stashed changes
             } else {
                 token = runwareApi;
                 steps = 50;
@@ -187,11 +278,40 @@ async function createImage(prompt, userId) {
 
 // Обработка команды /start
 bot.onText(/\/start/, (msg) => {
+    const userId = msg.from.id;
+    const users = loadUsers();
+
+    if (!users[userId]) {
+        // Если не существует, создаем нового пользователя
+        users[userId] = {
+            attemps: 0,
+            premium: {
+                isPremium: false,
+                expire: null
+            },
+            model: "Premium V1", // По умолчанию Free V1
+            language: "en"
+        };
+
+        // Сохраняем обновленный список пользователей
+        saveUsers(users);
+        console.log('New user');
+    }
+
+    // Предполагается, что язык пользователя загружается из объекта `users`
+    const user = users[userId] || { language: 'en' };
+
     // Проверяем, что сообщение пришло из группы или супергруппы
     if (msg.chat.type == 'group' || msg.chat.type == 'supergroup') {
         return;
     } else {
-        bot.sendMessage(msg.chat.id, '👋 Привет! Я бот для моментальной генерации картинок.\n\n🖼️ Отправь мне любой текст, и я сгенерирую изображение за считанные секунды!✨');
+        bot.sendMessage(msg.chat.id, getTranslation(user, 'startMessage'), {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: getTranslation(user, 'changeLanguageButton'), callback_data: 'change_language' }]
+                ]
+            }
+        });
     }
 });
 
@@ -216,7 +336,8 @@ bot.on('message', async (msg) => {
                     isPremium: false,
                     expire: null
                 },
-                model: "Premium V1" // По умолчанию Free V1
+                model: "Premium V1", // По умолчанию Free V1
+                language: "en"
             };
 
             // Сохраняем обновленный список пользователей
@@ -236,16 +357,40 @@ bot.on('message', async (msg) => {
             console.error(err);
         });
 
+<<<<<<< Updated upstream
         if (selectedModel != 'Free V1') {
             if (users[userId].premium.isPremium === false) {
                 // Проверяем количество попыток
                 if (users[userId].attemps >= 5) {
                     bot.sendMessage(userId, 'Ваш лимит попыток исчерпан.\nПопробуйте снова через ' + getTimeUntilReset() + ' или обновите до премиум-версии для неограниченного доступа.', {
+=======
+        const user = users[userId] || { language: 'en' };
+
+        if (users[userId].premium.isPremium === false) {
+            // Проверяем количество попыток
+            if (users[userId].attemps >= 3) {
+                const message = getTranslation(users[userId], 'attemptLimitMessage', { time: getTimeUntilReset() });
+                bot.sendMessage(userId, message, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
+                                { text: getTranslation(users[userId], 'buyPremium'), callback_data: 'buy_premium' }
+                            ]
+                        ]
+                    }
+                });
+                return;
+            } else {
+                if (containsForbiddenWords(translatedText) === true) {
+                    const message = getTranslation(users[userId], 'adultContentMessage');
+                    bot.sendMessage(userId, message, {
+>>>>>>> Stashed changes
                         reply_markup: {
                             inline_keyboard: [
                                 [
-                                    { text: '🔄 Сменить модель', callback_data: 'change_model' },
-                                    { text: '💳 Купить премиум', callback_data: 'buy_premium' }
+                                    { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
+                                    { text: getTranslation(users[userId], 'buyPremium'), callback_data: 'buy_premium' }
                                 ]
                             ]
                         }
@@ -288,16 +433,16 @@ bot.on('message', async (msg) => {
 
         console.log(`Получен запрос на генерацию изображения: ${msg.text}`);
 
-        const channelUsername = "@photoai_channel"
+        /*const channelUsername = "@photoai_channel"
 
         const subscribed = await isUserSubscribed(chatId, channelUsername);
         if (!subscribed) {
             await bot.sendMessage(chatId, `❌ Вы должны подписаться на наш канал ${channelUsername}, чтобы использовать этого бота.`);
             return;
-        }
+        }*/
 
         // Уведомление о начале генерации
-        const processingMsg = await bot.sendMessage(chatId, `🛠️ Начинаю генерацию по запросу:\n\n"${msg.text}"\n\nПожалуйста, подождите...`);
+        const processingMsg = await bot.sendMessage(chatId, getTranslation(user, 'generatingMessage', { text: msg.text }));
 
         try {
             console.log('Запускаем функцию createImage...');
@@ -331,18 +476,18 @@ bot.on('message', async (msg) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: `🎉 Вот ваша генерация по запросу:\n\n"${msg.text}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
+                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: "Ссылка на чат" }),
                 reply_markup: {
                     inline_keyboard: [[
                         {
-                            text: '🖌️ Регенерировать изображение',
+                            text: getTranslation(users[userId], 'regenerateButton'),
                             callback_data: `regenerate:${promptIndex}`,
                         },
-                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
+                        { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
                     ],
                     [
                         {
-                            text: '↙️ Скачать',
+                            text: getTranslation(users[userId], 'downloadButton'),
                             url: imageUrl,
                         }
                     ]],
@@ -358,11 +503,11 @@ bot.on('message', async (msg) => {
                 const retryAfter = error.response.body.parameters.retry_after;
                 console.error(`Превышен лимит запросов. Повторите попытку через ${retryAfter} секунд.`);
                 setTimeout(async () => {
-                    await bot.sendMessage(chatId, '⚠️ Превышен лимит запросов. Попробуйте снова.');
+                    await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
                 }, retryAfter * 1000); // Ждем указанное время
             } else {
                 console.error('Ошибка при генерации изображения:', error);
-                await bot.sendMessage(chatId, '❌ Произошла ошибка при генерации изображения. Пожалуйста, попробуйте позже.');
+                await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
             }
         }
 
@@ -378,11 +523,13 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const userId = query.from.id;
     const users = loadUsers();
+    const user = users[userId];
+
 
     // Логика для смены модели
     if (query.data === 'change_model') {
         // Показать кнопки выбора модели
-        await bot.sendMessage(userId, 'Выберите модель:', {
+        await bot.sendMessage(userId, getTranslation(user, 'changeModelMessage'), {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: 'Free V1', callback_data: 'set_free_v1' }],
@@ -391,6 +538,25 @@ bot.on('callback_query', async (query) => {
                 ]
             }
         });
+    } else if (query.data === 'change_language') {
+        // Отправляем сообщение с выбором языка
+        bot.sendMessage(query.message.chat.id, getTranslation(user, 'chooseLanguage'), {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: '🇺🇸 English', callback_data: 'language_en' },
+                        { text: '🇷🇺 Русский', callback_data: 'language_ru' }
+                    ]
+                ]
+            }
+        });
+    } else if (query.data === 'language_en' || query.data === 'language_ru') {
+        // Установка нового языка
+        user.language = query.data === 'language_en' ? 'en' : 'ru';
+        users[userId] = user;
+        saveUsers(users);
+
+        bot.sendMessage(query.message.chat.id, getTranslation(user, 'languageChanged'));
     } else if (query.data === 'set_premium_v1') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
@@ -400,12 +566,13 @@ bot.on('callback_query', async (query) => {
                     isPremium: false,
                     expire: null
                 },
-                model: "Free V1" // Default model
+                model: "Free V1", // Default model
+                language: "en"
             };
         }
         users[userId].model = "Premium V1";
         saveUsers(users);
-        await bot.sendMessage(userId, `✅ Модель изменена на "Premium V1"`);
+        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V1" }));
     } else if (query.data === 'set_free_v1') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
@@ -415,12 +582,17 @@ bot.on('callback_query', async (query) => {
                     isPremium: false,
                     expire: null
                 },
-                model: "Free V1" // Default model
+                model: "Free V1", // Default model
+                language: "en"
             };
         }
         users[userId].model = "Free V1";
         saveUsers(users);
+<<<<<<< Updated upstream
         await bot.sendMessage(userId, `✅ Модель изменена на "Free V1"`);
+=======
+        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "FastFlux V1" }));
+>>>>>>> Stashed changes
     } else if (query.data === 'set_premium_v2') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
@@ -430,38 +602,53 @@ bot.on('callback_query', async (query) => {
                     isPremium: false,
                     expire: null
                 },
-                model: "Free V1" // Default model
+                model: "Free V1", // Default model
+                language: "en"
             };
         }
         users[userId].model = "Premium V2";
         saveUsers(users);
-        await bot.sendMessage(userId, `✅ Модель изменена на "Premium V2"`);
+        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V2" }));
     } else if (query.data === 'buy_premium') {
         const options = {
             reply_markup: JSON.stringify({
                 inline_keyboard: [
+<<<<<<< Updated upstream
                     [{ text: '1 месяц - 199 рублей', callback_data: 'premium_1_month' }],
                     [{ text: '6 месяцев - 399 рублей', callback_data: 'premium_6_months' }],
                     [{ text: '1 год - 599 рублей', callback_data: 'premium_1_year' }]
+=======
+                    [{ text: getTranslation(user, 'onemonthSubs', { price: "199" }), callback_data: 'premium_1_month' }],
+                    [{ text: getTranslation(user, 'monthsSubs', { price: "399" }), callback_data: 'premium_6_months' }],
+                    [{ text: getTranslation(user, 'yearSubs', { price: "899" }), callback_data: 'premium_1_year' }]
+>>>>>>> Stashed changes
                 ]
             })
         };
 
-        await bot.sendMessage(userId, 'Выберите период подписки:', options);
+        await bot.sendMessage(userId, getTranslation(user, 'selectSubscriptionPeriodMessage'), options);
     }
 
     // Далее обработка выбора
     else if (query.data === 'premium_1_month') {
+<<<<<<< Updated upstream
         await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 месяц, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=199&userId=' + userId);
     } else if (query.data === 'premium_6_months') {
         await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 6 месяцев, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=399&userId=' + userId);
     } else if (query.data === 'premium_1_year') {
         await bot.sendMessage(userId, 'По вопросам оплаты: @webadmin11\n\nЧтобы купить премиум на 1 год, перейдите по следующей ссылке: https://pay.saleslift.store/?amount=599&userId=' + userId);
+=======
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "199" }));
+    } else if (query.data === 'premium_6_months') {
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "399" }));
+    } else if (query.data === 'premium_1_year') {
+        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: "899" }));
+>>>>>>> Stashed changes
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
         if (!prompts[promptIndex]) {
-            await bot.sendMessage(chatId, '❌ Произошла ошибка: не удалось найти запрос. Пожалуйста, попробуйте заново.');
+            await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
             return;
         }
 
@@ -469,7 +656,7 @@ bot.on('callback_query', async (query) => {
         console.log(`Получен запрос на регенерацию изображения по промту: ${prompt}`);
 
         // Уведомление о начале генерации
-        const processingMsg = await bot.sendMessage(chatId, `🔄 Регенерирую изображение по запросу:\n\n"${prompt}"\n\nПожалуйста, подождите...`);
+        const processingMsg = await bot.sendMessage(chatId, getTranslation(user, 'regenerateSession', { prompt: prompt }));
 
         try {
             // Проверяем, если у пользователя уже выбрана модель
@@ -479,12 +666,13 @@ bot.on('callback_query', async (query) => {
                 if (users[userId].premium.isPremium === false) {
                     // Проверяем количество попыток
                     if (users[userId].attemps >= 3) {
-                        bot.sendMessage(userId, 'Ваш лимит попыток исчерпан. Попробуйте снова через час или обновите до премиум-версии для неограниченного доступа.', {
+                        const message = getTranslation(users[userId], 'attemptLimitMessage', { time: getTimeUntilReset() });
+                        bot.sendMessage(userId, message, {
                             reply_markup: {
                                 inline_keyboard: [
                                     [
-                                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
-                                        { text: '💳 Купить премиум', callback_data: 'buy_premium' }
+                                        { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
+                                        { text: getTranslation(users[userId], 'buyPremium'), callback_data: 'buy_premium' }
                                     ]
                                 ]
                             }
@@ -522,18 +710,22 @@ bot.on('callback_query', async (query) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
+<<<<<<< Updated upstream
                 caption: `🎉 Вот ваша генерация по запросу:\n\n"${prompt}"\n\n💬 Наш чат: https://t.me/+-FXl0TbqBPZiN2Yy\n👉 Нажмите кнопку ниже, чтобы регенерировать изображение.`,
+=======
+                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: "Ссылка на чат" }),
+>>>>>>> Stashed changes
                 reply_markup: {
                     inline_keyboard: [[
                         {
-                            text: '🖌️ Регенерировать изображение',
+                            text: getTranslation(users[userId], 'regenerateButton'),
                             callback_data: `regenerate:${promptIndex}`,
                         },
-                        { text: '🔄 Сменить модель', callback_data: 'change_model' },
+                        { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
                     ],
                     [
                         {
-                            text: '↙️ Скачать',
+                            text: getTranslation(users[userId], 'downloadButton'),
                             url: imageUrl,
                         }
                     ]],
@@ -546,7 +738,7 @@ bot.on('callback_query', async (query) => {
 
         } catch (error) {
             console.error('Ошибка при регенерации изображения:', error);
-            await bot.sendMessage(chatId, '❌ Произошла ошибка при регенерации изображения. Пожалуйста, попробуйте позже.');
+            await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
         }
 
         // Удаление сообщения о процессе
