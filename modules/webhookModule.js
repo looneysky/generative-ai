@@ -42,7 +42,7 @@ app.post('/api/check-subscription', async (req, res) => {
     const { userId } = req.body;
     const channelUsername = channelTelegram;
 
-    if (!userId || !channelUsername) {
+    if (!userId) {
         return res.status(400).send('userId и channelUsername обязательны');
     }
 
