@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./configModule');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
-const { createImage } = require('./createImage');
+const { createImageV2 } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
 const path = require('path');
 
@@ -160,7 +160,7 @@ app.post('/api/generate-image', async (req, res) => {
 
     try {
         const userId = '101'; // Replace with the actual user ID, if necessary
-        const imageUrl = await createImage(prompt, userId); // Call your existing createImage function
+        const imageUrl = await createImageV2(prompt, userId); // Call your existing createImage function
 
         res.status(200).json({ imageUrl });
     } catch (error) {

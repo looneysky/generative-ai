@@ -10,6 +10,9 @@ const sharp = require('sharp');
 const webhook = require('./modules/webhookModule'); // Импортируем ваш модуль
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
 const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
+const { generateImageV2 } = require('./modules/newModelV2');
+const { generateImage } = require('./modules/newModel');
+const { createImageV2 } = require('./modules/createImage');
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
 const { containsForbiddenWords } = require('./modules/forbiddenWords');
@@ -123,68 +126,41 @@ async function generateImageWithBackup(prompt) {
     }
 }
 
-async function verifyUser() {
-    const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
-
-    try {
-        const response = await axios.get(verifyUrl);
-        console.log('Ответ от API верификации:', response.data);
-
-        if (response.data.status === 'success' && response.data.userKey) {
-            return response.data.userKey;
-        } else if (response.data.status === 'already_verified') {
-            return response.data.userKey;
-        } else {
-            throw new Error('Не удалось получить userKey из ответа');
-        }
-    } catch (error) {
-        console.error('Ошибка при запросе верификации пользователя:', error.message);
-        throw error; // Пробрасываем ошибку для обработки в createImage
-    }
-}
-
+// Main function to create an image based on user model
 async function createImage(prompt, userId) {
-    const maxRetries = 3;
-    let attempt = 0;
-
     try {
-        const userKey = await verifyUser();
+        const users = await loadUsers();
+        const user = users[userId];
 
-        const connectAndGenerateImage = async () => {
-            console.log('Отправляем запрос на генерацию изображения...');
-            const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+        // Check if the user exists
+        if (!user) {
+            throw new Error('User not found');
+        }
 
-            const response = await axios.get(requestUrl);
-            console.log('Ответ от API:', response.data);
+        // Choose the image generation method based on the user's model
+        switch (user.model) {
+            case "Free V1":
+                return await createImageV2(prompt);
 
-            if (response.data.status === 'success' && response.data.imageId) {
-                const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
-                console.log('Изображение успешно сгенерировано. URL:', imageUrl);
-                return imageUrl;
-            } else {
-                throw new Error('Не удалось получить imageId из ответа');
-            }
-        };
+            case "Premium V1":
+                return await generateImage(prompt);
 
-        while (attempt < maxRetries) {
-            try {
-                return await connectAndGenerateImage();
-            } catch (error) {
-                console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
-                attempt++;
-                if (attempt >= maxRetries) {
-                    console.error('Применяем резервный метод генерации изображения...');
-                    return await generateImageWithBackup(prompt); // Используем резервный метод
-                }
-            }
+            // Assuming this is part of your createImage function
+            case "Premium V2":
+                /*const negativePrompt = "low quality, deformed, blurry, bad art, drawing, painting"; // Define your negative prompt
+                return await generateImageV2(prompt, negativePrompt);*/
+                return await generateImage(prompt);
+
+
+            default:
+                throw new Error('Unsupported model');
         }
     } catch (error) {
-        console.error('Ошибка при верификации пользователя или генерации изображения:', error.message);
-        // Пытаемся использовать резервный метод сразу, если возникла ошибка
-        return await generateImageWithBackup(prompt);
+        console.error('Error during image generation:', error.message);
+        // You can handle the error further as needed
+        throw error; // Rethrow the error for upstream handling if necessary
     }
 }
-
 
 // Обработка команды /start
 bot.onText(/\/start/, (msg) => {
@@ -392,7 +368,13 @@ bot.on('message', async (msg) => {
                 }, retryAfter * 1000); // Ждем указанное время
             } else {
                 console.error('Ошибка при генерации изображения:', error);
-                await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
+                await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'), {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
+                        ]]
+                    }
+                });
             }
         }
 
@@ -417,9 +399,9 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(userId, getTranslation(user, 'changeModelMessage'), {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
+                    [{ text: 'FastFlux V1 (18+)', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Premium V2 (18+)', callback_data: 'set_premium_v2' }]
                 ]
             }
         });
@@ -589,7 +571,7 @@ bot.on('callback_query', async (query) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: chatTelegram }),
+                caption: getTranslation(user, 'regenerateMessage', { text: prompt, chat: chatTelegram }),
                 reply_markup: {
                     inline_keyboard: [[
                         {
