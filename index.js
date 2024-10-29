@@ -143,13 +143,15 @@ async function createImage(prompt, userId) {
                 return await createImageV2(prompt);
 
             case "Premium V1":
-                return await generateImage(prompt);
+                /*return await generateImage(prompt);*/
+                return await createImageV2(prompt);
 
             // Assuming this is part of your createImage function
             case "Premium V2":
                 /*const negativePrompt = "low quality, deformed, blurry, bad art, drawing, painting"; // Define your negative prompt
                 return await generateImageV2(prompt, negativePrompt);*/
-                return await generateImage(prompt);
+                /*return await generateImage(prompt);*/
+                return await createImageV2(prompt);
 
 
             default:
