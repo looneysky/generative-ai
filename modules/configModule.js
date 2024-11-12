@@ -11,6 +11,7 @@ const priceMonths = process.env.PRICE_MONTHS;
 const priceYear = process.env.PRICE_YEAR;
 const channelTelegram = process.env.CHANNEL_USERNAME;
 const chatTelegram = process.env.CHAT_LINK;
+const apiUrl = process.env.API_URL;
 
 // Экспортируем переменные
 module.exports = {
@@ -22,5 +23,6 @@ module.exports = {
     priceMonths,
     priceYear,
     channelTelegram,
-    chatTelegram
+    chatTelegram,
+    apiUrl
 };

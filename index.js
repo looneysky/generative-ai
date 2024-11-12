@@ -20,7 +20,11 @@ const translations = require('./modules/languagesPack');
 
 // Функция для получения сообщения на нужном языке
 function getTranslation(user, key, params = {}) {
-    const language = user.language || 'en';
+    let language;
+    if (user != null) {
+        language = user.language || 'en';
+    }
+    language = 'en';
     let message = translations[language][key] || translations['en'][key];
 
     // Замена параметров, таких как {text}, {time}, {channel} и т.д.
@@ -144,7 +148,7 @@ async function createImage(prompt, userId) {
 
             case "Premium V1":
                 /*return await generateImage(prompt);*/
-                return await createImageV2(prompt);
+                return await generateImage(prompt);
 
             // Assuming this is part of your createImage function
             case "Premium V2":
