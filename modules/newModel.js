@@ -1,10 +1,10 @@
 const axios = require('axios');
-const { apiUrl } = require('./configModule');
+const { apiUrl } = require('./configModule');  // Импортируем apiUrl из configModule
 
 // Функция для отправки запроса и получения ссылки на изображение
 async function generateImage(prompt) {
-    // URL вашего Flask API
-    const apiUrl = `${apiUrl}/generate`;
+    // Используем уже импортированный apiUrl
+    const url = `${apiUrl}/generate`;
 
     // Данные для запроса
     const data = {
@@ -15,7 +15,7 @@ async function generateImage(prompt) {
 
     try {
         // Отправка POST-запроса на Flask API
-        const response = await axios.post(apiUrl, data);
+        const response = await axios.post(url, data);
 
         // Проверка успешности запроса
         if (response.status === 200) {
