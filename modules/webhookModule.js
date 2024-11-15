@@ -95,11 +95,11 @@ app.post('/webhook', (req, res) => {
 
     // Увеличиваем срок действия премиума в зависимости от суммы
     if (amount === priceMonth) {
-        expireDate.setMonth(expireDate.getMonth() + 1); // 1 месяц
-    } else if (amount === priceMonths) {
         expireDate.setMonth(expireDate.getMonth() + 6); // 6 месяцев
+    } else if (amount === priceMonths) {
+        expireDate.setMonth(expireDate.getFullYear() + 1); // 1 год
     } else if (amount === priceYear) {
-        expireDate.setFullYear(expireDate.getFullYear() + 1); // 1 год
+        expireDate.setFullYear(expireDate.getFullYear() + 2); // 2 года
     } else {
         console.log(amount, priceMonth)
         return res.status(400).send('Invalid amount');
