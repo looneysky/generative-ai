@@ -10,7 +10,7 @@ async function generateImage(prompt) {
     const data = {
         model: "model1",        // Имя модели (должно соответствовать модели в Flask)
         prompt: prompt,
-        size: "2_2"             // Размер изображения (например, "1_1", "2_2")
+        size: "1_1_HD"             // Размер изображения (например, "1_1", "2_2")
     };
 
     try {

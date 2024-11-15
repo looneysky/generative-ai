@@ -10,10 +10,10 @@ async function generateImageWithBackup(prompt) {
         prompt: prompt,
         negativePrompt: "",
         key: "Cinematic",
-        width: 1024,
-        height: 1024,
+        width: 2048,
+        height: 2048,
         quantity: 1,
-        size: "1024x1024"
+        size: "2048x2048"
     };
 
     const headers = {
