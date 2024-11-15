@@ -1,20 +1,20 @@
 {
-  "7259949651": {
-      "attemps": 0,
-      "premium": {
-          "isPremium": true,
-          "expire": null
-      },
-      "model": "Premium V1",
-      "language": "en"
-  },
-  "6705789019": {
-      "attemps": 0,
-      "premium": {
-          "isPremium": false,
-          "expire": null
-      },
-      "model": "Premium V1",
-      "language": "en"
-  }
+    "7259949651": {
+        "attemps": 0,
+        "premium": {
+            "isPremium": false,
+            "expire": null
+        },
+        "model": "Premium V1",
+        "language": "en"
+    },
+    "6705789019": {
+        "attemps": 0,
+        "premium": {
+            "isPremium": false,
+            "expire": null
+        },
+        "model": "Premium V1",
+        "language": "en"
+    }
 }
