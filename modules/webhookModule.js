@@ -7,6 +7,7 @@ const { loadUsers, saveUsers } = require('./baseModule'); // Импортиру�
 const { createImageV2 } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
 const path = require('path');
+const WebSocket = require('ws');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
