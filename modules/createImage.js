@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { runwareApi, runwareApi2 } = require('./configModule');
 const { loadUsers, models } = require('./baseModule');
 const axios = require('axios');
+const WebSocket = require('ws');
 
 async function generateImageWithBackup(prompt) {
     const url = 'https://aiimagegenerator.io/api/model/predict-peach';
