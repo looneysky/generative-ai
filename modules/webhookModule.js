@@ -191,7 +191,7 @@ app.get('/api/user/name/:userId', async (req, res) => {
 
     try {
         // Запрос к Telegram API для получения информации о пользователе
-        const response = await axios.get(`https://api.telegram.org/bot7836134190:AAF_nt_y78XsmLTW7TTi771lbEmNRdJROJQ/getChat?chat_id=${userId}`);
+        const response = await axios.get(`https://api.telegram.org/bot7606483721:AAEC9UnejsT-HHNSNS9sNQyDBUGa90iMLGU/getChat?chat_id=${userId}`);
         const userData = response.data.result;
 
         // Возвращаем имя, фамилию и имя пользователя
@@ -222,14 +222,14 @@ app.get('/api/user/avatar/:userId', async (req, res) => {
 // Функция для получения URL аватара через Telegram API
 async function getTelegramAvatar(userId) {
     try {
-        const response = await axios.get(`https://api.telegram.org/bot7836134190:AAF_nt_y78XsmLTW7TTi771lbEmNRdJROJQ/getUserProfilePhotos?user_id=${userId}`);
+        const response = await axios.get(`https://api.telegram.org/bot7606483721:AAEC9UnejsT-HHNSNS9sNQyDBUGa90iMLGU/getUserProfilePhotos?user_id=${userId}`);
         const photos = response.data.result.photos;
 
         if (photos && photos.length > 0) {
             const photo = photos[0][0].file_id;
-            const fileResponse = await axios.get(`https://api.telegram.org/bot7836134190:AAF_nt_y78XsmLTW7TTi771lbEmNRdJROJQ/getFile?file_id=${photo}`);
+            const fileResponse = await axios.get(`https://api.telegram.org/bot7606483721:AAEC9UnejsT-HHNSNS9sNQyDBUGa90iMLGU/getFile?file_id=${photo}`);
             const filePath = fileResponse.data.result.file_path;
-            return `https://api.telegram.org/file/bot7836134190:AAF_nt_y78XsmLTW7TTi771lbEmNRdJROJQ/${filePath}`;
+            return `https://api.telegram.org/file/bot7606483721:AAEC9UnejsT-HHNSNS9sNQyDBUGa90iMLGU/${filePath}`;
         }
 
         return null;
