@@ -480,9 +480,9 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(userId, getTranslation(user, 'changeModelMessage'), {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'FastFlux V1 (18+)', callback_data: 'set_free_v1' }],
+                    [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2 (18+)', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
                 ]
             }
         });
