@@ -130,37 +130,116 @@ async function generateImageWithBackup(prompt) {
     }
 }
 
-// Main function to create an image based on user model
 async function createImage(prompt, userId) {
-    try {
-        const users = await loadUsers();
-        const user = users[userId];
+    const maxRetries = 3;
+    let attempt = 0;
 
-        // Check if the user exists
-        if (!user) {
-            throw new Error('User not found');
+    const connectAndGenerateImage = () => {
+        return new Promise((resolve, reject) => {
+            console.log('Создаем WebSocket соединение...');
+            const ws = new WebSocket('wss://ws-api.runware.ai/v1');
+            const users = loadUsers();
+            let token;
+            let steps;
+            let width;
+            let height;
+            let sampler;
+            if (users[userId].model === 'Free V1') {
+                token = runwareApi2;
+                steps = 10;
+                width = 1024;
+                height = 1024;
+            } else if (users[userId].model === 'Premium V1') {
+                token = runwareApi;
+                steps = 50;
+                width = 832;
+                height = 1216;
+                sampler = 'DPM++ SDE' // Используем семплер DPM++ SDE
+            } else {
+                token = runwareApi;
+                steps = 50;
+                width = 1024;
+                height = 1024;
+            }
+
+            console.log(token)
+
+            ws.on('open', () => {
+                console.log('WebSocket соединение открыто. Отправляем запрос на аутентификацию...');
+                const authRequest = [{ taskType: 'authentication', apiKey: token }];
+                ws.send(JSON.stringify(authRequest));
+            });
+
+            ws.on('message', (data) => {
+                console.log(data)
+                // Преобразуем Buffer в строку
+                const text = data.toString();
+                console.log(text)
+                const response = JSON.parse(text);
+
+                // Проверяем, если у пользователя уже выбрана модель
+                const selectedModel = users[userId].model; // По умолчанию 'Free V1', если модель не выбрана
+                console.log(models[selectedModel])
+                console.log(steps)
+
+                if (response.data && response.data[0]?.taskType === 'authentication') {
+                    console.log('Аутентификация успешна. Отправляем запрос на генерацию изображения...');
+                    const imageRequest = [{
+                        positivePrompt: prompt, // Ваш хорошо сформулированный запрос
+                        model: models[selectedModel], // Основная модель
+                        steps: steps, // Увеличенное количество шагов для улучшения деталей
+                        width: width, // Ширина изображения
+                        height: height, // Высота изображения
+                        numberResults: 1, // Количество изображений
+                        outputType: ['URL'], // Формат вывода
+                        taskType: 'imageInference', // Тип задачи
+                        taskUUID: uuidv4(), // Уникальный идентификатор задачи
+                        enableHighResFix: true // Включаем фиксацию высокого разрешения (если нужно)
+                    }];
+                    
+                    // Добавляем семплер только если он не равен null
+                    if (sampler !== null) {
+                        imageRequest.sampler = sampler;
+                    }
+                    
+                    // Отправляем запрос                    
+                    ws.send(JSON.stringify(imageRequest));
+
+                } if (response.data && response.data[0]?.taskType === 'imageInference') {
+                    console.log('Изображение успешно сгенерировано. Получаем URL...');
+                    resolve(response.data[0].imageURL);
+                    ws.close();
+                } else {
+                    console.log('Неожиданное сообщение от WebSocket:', response);
+                }
+            });
+
+
+
+            ws.on('error', (err) => {
+                console.error('Произошла ошибка WebSocket:', err);
+                reject(err);
+            });
+
+            ws.on('close', (code, reason) => {
+                console.log(`WebSocket соединение закрыто. Код: ${code}, Причина: ${reason}`);
+            });
+        });
+    };
+
+    while (attempt < maxRetries) {
+        try {
+            return await connectAndGenerateImage();
+        } catch (error) {
+            console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
+            attempt += 1;
+
+            if (attempt < maxRetries) {
+                console.log(`Переотправка запроса... (${attempt}/${maxRetries})`);
+            } else {
+                throw new Error('Не удалось сгенерировать изображение после 3 попыток.');
+            }
         }
-
-        // Choose the image generation method based on the user's model
-        switch (user.model) {
-            case "Free V1":
-                return await createImageV2(prompt);
-
-            case "Premium V1":
-                /*return await generateImage(prompt);*/
-                return await generateImage(prompt);
-
-            // Assuming this is part of your createImage function
-            case "Premium V2":
-                return await generateImageV2(prompt);
-
-            default:
-                throw new Error('Unsupported model');
-        }
-    } catch (error) {
-        console.error('Error during image generation:', error.message);
-        // You can handle the error further as needed
-        throw error; // Rethrow the error for upstream handling if necessary
     }
 }
 
