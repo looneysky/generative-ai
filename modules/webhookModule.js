@@ -4,21 +4,13 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./configModule');
 const { loadUsers, saveUsers } = require('./baseModule'); // Импортируйте функции загрузки и сохранения пользователей
-const { createImageV2 } = require('./createImage');
+const { createImage } = require('./createImage');
 const bot = require('./botModule'); // Импортируйте ваш бот (например, Telegram bot)
 const path = require('path');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json()); // Use this to parse JSON
-
-const secret = process.env.SECRET; // Секретное слово для хэша
-
-// Вспомогательная функция для вычисления SHA-1 хэша
-function calculateHash(params, secret) {
-    const str = `${params.notification_type}&${params.operation_id}&${params.amount}&${params.currency}&${params.datetime}&${params.sender}&${params.codepro}&${secret}&${params.label}`;
-    return crypto.createHash('sha1').update(str, 'utf8').digest('hex');
-}
 
 // Функция для проверки подписки пользователя
 async function isUserSubscribed(userId, channelUsername) {
@@ -53,44 +45,29 @@ app.post('/api/check-subscription', async (req, res) => {
 // Вебхук для приема уведомлений
 app.post('/webhook', (req, res) => {
     const {
-        notification_type,
-        operation_id,
-        amount,
-        currency,
-        datetime,
-        sender,
-        codepro,
-        label, // label будет использоваться как userId
-        sha1_hash,
-        test_notification // флаг тестового уведомления
+        pay_amount,
+        order_description,
+        payment_status
     } = req.body;
 
     console.log(req.body);
+    // Convert order_description to an integer
+    const orderDescriptionInt = parseInt(order_description, 10);
+    const amount = String(pay_amount);
 
     // Проверяем тестовое уведомление
-    if (test_notification === 'true') {
-        console.log('Test notification received');
-        return res.status(200).send('Test notification received');
+    if (payment_status != 'finished') {
+        console.log('Waiting payment');
+        return res.status(200).send('Waiting payment');
     }
 
     // Проверяем наличие label
-    if (!label) {
+    if (!orderDescriptionInt) {
         return res.status(400).send('Label (userId) is missing');
     }
 
-    // Проверяем хэш
-    const calculatedHash = calculateHash(req.body, secret);
-    if (calculatedHash !== sha1_hash) {
-        return res.status(400).send('Invalid hash');
-    }
-
-    // Проверяем валюту (должна быть рубли - 643)
-    if (currency !== '643') {
-        return res.status(400).send('Invalid currency');
-    }
-
     // Логика обновления пользователя в зависимости от суммы
-    const userId = label; // Используем label как идентификатор пользователя
+    const userId = orderDescriptionInt; // Используем label как идентификатор пользователя
 
     const users = loadUsers();
 
@@ -124,6 +101,7 @@ app.post('/webhook', (req, res) => {
     } else if (amount === priceYear) {
         expireDate.setFullYear(expireDate.getFullYear() + 1); // 1 год
     } else {
+        console.log(amount, priceMonth)
         return res.status(400).send('Invalid amount');
     }
 
@@ -160,7 +138,7 @@ app.post('/api/generate-image', async (req, res) => {
 
     try {
         const userId = '101'; // Replace with the actual user ID, if necessary
-        const imageUrl = await createImageV2(prompt, userId); // Call your existing createImage function
+        const imageUrl = await createImage(prompt, userId); // Call your existing createImage function
 
         res.status(200).json({ imageUrl });
     } catch (error) {

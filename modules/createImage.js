@@ -60,7 +60,7 @@ async function verifyUser() {
     }
 }
 
-async function createImageV2(prompt, userId) {
+async function createImage(prompt, userId) {
     const maxRetries = 3;
     let attempt = 0;
 
@@ -105,5 +105,5 @@ async function createImageV2(prompt, userId) {
 
 // Экспортируем функцию
 module.exports = {
-    createImageV2
+    createImage
 };

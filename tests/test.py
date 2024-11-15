@@ -1,39 +1,43 @@
 import requests
-import hashlib
+import json
 
-# URL вашего вебхука
-url = 'http://localhost:3000/webhook'
+# The URL to which the POST request is being sent
+url = 'http://localhost:3000/webhook'  # Replace with your actual URL
 
-# Ваш секретный ключ для расчета хэша
-secret = 'NpVh2NNjOstzy0gUFJmsWzlw'
+# The data to send in the POST request
+payload = {
+    "actually_paid": 0,
+    "actually_paid_at_fiat": 0,
+    "fee": {
+        "currency": "usdttrc20",
+        "depositFee": 0,
+        "serviceFee": 0,
+        "withdrawalFee": 0
+    },
+    "invoice_id": None,
+    "order_description": '7259949651',
+    "order_id": "dd4abd66761561622eafc9a56d09f160",
+    "outcome_amount": 192.728833,
+    "outcome_currency": "usdttrc20",
+    "parent_payment_id": None,
+    "pay_address": "TUTruUEpoLAgSdkLUbLAx4wPmSCVqXNx2c",
+    "pay_amount": 199,
+    "pay_currency": "usdttrc20",
+    "payin_extra_id": None,
+    "payment_extra_ids": None,
+    "payment_id": 6033754129,
+    "payment_status": "finished",
+    "price_amount": 199,
+    "price_currency": "usdttrc20",
+    "purchase_id": "6236048111"
+}
 
-# Количество запросов
-num_requests = 1
+# Send the POST request with the JSON payload
+response = requests.post(url, json=payload)
 
-for i in range(num_requests):
-    # Данные для отправки
-    data = {
-        'notification_type': 'p2p-incoming',
-        'operation_id': f'test-notification-{i}',  # Уникальный operation_id для каждого запроса
-        'amount': '199.00',
-        'currency': '643',
-        'datetime': '2024-10-08T22:35:05Z',
-        'sender': '41001000040',
-        'codepro': 'false',
-        'label': '7275188161'  # userId
-    }
-
-    # Создаем строку для хэша в правильном порядке
-    hash_string = f"{data['notification_type']}&{data['operation_id']}&{data['amount']}&{data['currency']}&{data['datetime']}&{data['sender']}&{data['codepro']}&{secret}&{data['label']}"
-
-    # Вычисляем sha1 хэш
-    sha1_hash = hashlib.sha1(hash_string.encode('utf-8')).hexdigest()
-
-    # Добавляем хэш в данные
-    data['sha1_hash'] = sha1_hash
-
-    # Отправляем POST запрос
-    response = requests.post(url, data=data)
-
-    # Печатаем результат
-    print(f'Request {i + 1}: Status code: {response.status_code}, Response body: {response.text}')
+# Print the response from the server
+if response.status_code == 200:
+    print("Request successful:", response.text)
+else:
+    print("Request failed with status code:", response.status_code)
+    print("Response: ", response.text)

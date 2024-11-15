@@ -10,9 +10,7 @@ const sharp = require('sharp');
 const webhook = require('./modules/webhookModule'); // Импортируем ваш модуль
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
 const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
-const { generateImageV2 } = require('./modules/newModelV2');
-const { generateImage } = require('./modules/newModel');
-const { createImageV2 } = require('./modules/createImage');
+const { createPayment, generateQr } = require('./modules/paymentModule');
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
 const { containsForbiddenWords } = require('./modules/forbiddenWords');
@@ -20,11 +18,7 @@ const translations = require('./modules/languagesPack');
 
 // Функция для получения сообщения на нужном языке
 function getTranslation(user, key, params = {}) {
-    let language;
-    if (user != null) {
-        language = user.language || 'en';
-    }
-    language = 'en';
+    const language = user.language || 'en';
     let message = translations[language][key] || translations['en'][key];
 
     // Замена параметров, таких как {text}, {time}, {channel} и т.д.
@@ -130,39 +124,68 @@ async function generateImageWithBackup(prompt) {
     }
 }
 
-// Main function to create an image based on user model
-async function createImage(prompt, userId) {
+async function verifyUser() {
+    const verifyUrl = `https://image-generation.perchance.org/api/verifyUser?thread=2&__cacheBust=${Math.random()}`;
+
     try {
-        const users = await loadUsers();
-        const user = users[userId];
+        const response = await axios.get(verifyUrl);
+        console.log('Ответ от API верификации:', response.data);
 
-        // Check if the user exists
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        // Choose the image generation method based on the user's model
-        switch (user.model) {
-            case "Free V1":
-                return await createImageV2(prompt);
-
-            case "Premium V1":
-                /*return await generateImage(prompt);*/
-                return await generateImage(prompt);
-
-            // Assuming this is part of your createImage function
-            case "Premium V2":
-                return await generateImageV2(prompt);
-
-            default:
-                throw new Error('Unsupported model');
+        if (response.data.status === 'success' && response.data.userKey) {
+            return response.data.userKey;
+        } else if (response.data.status === 'already_verified') {
+            return response.data.userKey;
+        } else {
+            throw new Error('Не удалось получить userKey из ответа');
         }
     } catch (error) {
-        console.error('Error during image generation:', error.message);
-        // You can handle the error further as needed
-        throw error; // Rethrow the error for upstream handling if necessary
+        console.error('Ошибка при запросе верификации пользователя:', error.message);
+        throw error; // Пробрасываем ошибку для обработки в createImage
     }
 }
+
+async function createImage(prompt, userId) {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    try {
+        const userKey = await verifyUser();
+
+        const connectAndGenerateImage = async () => {
+            console.log('Отправляем запрос на генерацию изображения...');
+            const requestUrl = `https://image-generation.perchance.org/api/generate?prompt=${encodeURIComponent(prompt)}&seed=-1&resolution=1024x1024&guidanceScale=7&negativePrompt=${encodeURIComponent("low quality, deformed, blurry, bad art, drawing, painting, horrible resolutions, low DPI, low PPI, blurry, glitch, error")}&channel=image-generator-professional&subChannel=public&userKey=${userKey}&requestId=0.3375448669220542&__cacheBust=${Math.random()}`;
+
+            const response = await axios.get(requestUrl);
+            console.log('Ответ от API:', response.data);
+
+            if (response.data.status === 'success' && response.data.imageId) {
+                const imageUrl = `https://image-generation.perchance.org/api/downloadTemporaryImage?imageId=${response.data.imageId}`;
+                console.log('Изображение успешно сгенерировано. URL:', imageUrl);
+                return imageUrl;
+            } else {
+                throw new Error('Не удалось получить imageId из ответа');
+            }
+        };
+
+        while (attempt < maxRetries) {
+            try {
+                return await connectAndGenerateImage();
+            } catch (error) {
+                console.error(`Ошибка при попытке ${attempt + 1}:`, error.message);
+                attempt++;
+                if (attempt >= maxRetries) {
+                    console.error('Применяем резервный метод генерации изображения...');
+                    return await generateImageWithBackup(prompt); // Используем резервный метод
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при верификации пользователя или генерации изображения:', error.message);
+        // Пытаемся использовать резервный метод сразу, если возникла ошибка
+        return await generateImageWithBackup(prompt);
+    }
+}
+
 
 // Обработка команды /start
 bot.onText(/\/start/, (msg) => {
@@ -194,11 +217,6 @@ bot.onText(/\/start/, (msg) => {
         return;
     } else {
         bot.sendMessage(msg.chat.id, getTranslation(user, 'startMessage'), {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: getTranslation(user, 'changeLanguageButton'), callback_data: 'change_language' }]
-                ]
-            }
         });
     }
 });
@@ -370,13 +388,7 @@ bot.on('message', async (msg) => {
                 }, retryAfter * 1000); // Ждем указанное время
             } else {
                 console.error('Ошибка при генерации изображения:', error);
-                await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'), {
-                    reply_markup: {
-                        inline_keyboard: [[
-                            { text: getTranslation(users[userId], 'changeModelButton'), callback_data: 'change_model' },
-                        ]]
-                    }
-                });
+                await bot.sendMessage(chatId, getTranslation(user, 'errorMessage'));
             }
         }
 
@@ -401,9 +413,9 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(userId, getTranslation(user, 'changeModelMessage'), {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'FastFlux V1 (18+)', callback_data: 'set_free_v1' }],
+                    [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2 (18+)', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
                 ]
             }
         });
@@ -502,11 +514,56 @@ bot.on('callback_query', async (query) => {
 
     // Далее обработка выбора
     else if (query.data === 'premium_1_month') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceMonth }));
+        // Await createPayment to get the actual response data
+        const { amountToPay, usdtAddress } = await createPayment(priceMonth, userId);
+        const qr_code = await generateQr(usdtAddress, amountToPay);
+        await bot.sendPhoto(userId, qr_code, {
+            caption: getTranslation(user, 'paymentInfo', { price: amountToPay, address: usdtAddress.replace(/\./g, '\\.') }),
+            parse_mode: 'Markdown'  // Enable MarkdownV2 for the caption
+        });
+
+        // Clean up the temporary QR code file after sending
+        fs.unlink(qr_code, (err) => {
+            if (err) {
+                console.error('Failed to delete temporary QR code file:', err.message);
+            } else {
+                console.log('Temporary QR code file deleted.');
+            }
+        });
     } else if (query.data === 'premium_6_months') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceMonths }));
+        // Await createPayment to get the actual response data
+        const { amountToPay, usdtAddress } = await createPayment(priceMonths, userId);
+        const qr_code = await generateQr(usdtAddress, amountToPay);
+        await bot.sendPhoto(userId, qr_code, {
+            caption: getTranslation(user, 'paymentInfo', { price: amountToPay, address: usdtAddress.replace(/\./g, '\\.') }),
+            parse_mode: 'Markdown'  // Enable MarkdownV2 for the caption
+        });
+
+        // Clean up the temporary QR code file after sending
+        fs.unlink(qr_code, (err) => {
+            if (err) {
+                console.error('Failed to delete temporary QR code file:', err.message);
+            } else {
+                console.log('Temporary QR code file deleted.');
+            }
+        });
     } else if (query.data === 'premium_1_year') {
-        await bot.sendMessage(userId, getTranslation(user, 'paymentInfo', { price: priceYear }));
+        // Await createPayment to get the actual response data
+        const { amountToPay, usdtAddress } = await createPayment(priceYear, userId);
+        const qr_code = await generateQr(usdtAddress, amountToPay);
+        await bot.sendPhoto(userId, qr_code, {
+            caption: getTranslation(user, 'paymentInfo', { price: amountToPay, address: usdtAddress.replace(/\./g, '\\.') }),
+            parse_mode: 'Markdown'  // Enable MarkdownV2 for the caption
+        });
+
+        // Clean up the temporary QR code file after sending
+        fs.unlink(qr_code, (err) => {
+            if (err) {
+                console.error('Failed to delete temporary QR code file:', err.message);
+            } else {
+                console.log('Temporary QR code file deleted.');
+            }
+        });
     } else {
         // Другие callback-запросы, например регенерация изображений
         const promptIndex = query.data.split(':')[1];
@@ -573,7 +630,7 @@ bot.on('callback_query', async (query) => {
 
             // Отправляем локальный файл в чат
             await bot.sendPhoto(chatId, filePath, {
-                caption: getTranslation(user, 'regenerateMessage', { text: prompt, chat: chatTelegram }),
+                caption: getTranslation(user, 'regenerateMessage', { text: msg.text, chat: chatTelegram }),
                 reply_markup: {
                     inline_keyboard: [[
                         {
