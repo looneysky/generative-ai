@@ -11,6 +11,7 @@ const webhook = require('./modules/webhookModule'); // Импортируем в
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
 const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
 const { generateImageV2 } = require('./modules/newModelV2');
+const { generatePhoto } = require('./modules/pornModel');
 const { generateImage } = require('./modules/newModel');
 const { createImageV2 } = require('./modules/createImage');
 const bot = require('./modules/botModule');
@@ -153,6 +154,9 @@ async function createImage(prompt, userId) {
             // Assuming this is part of your createImage function
             case "Premium V2":
                 return await generateImageV2(prompt);
+
+            case "Turbo18Plus":
+                return await generatePhoto(prompt);
 
             default:
                 throw new Error('Unsupported model');
@@ -401,9 +405,10 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(userId, getTranslation(user, 'changeModelMessage'), {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'FastFlux V1 (18+)', callback_data: 'set_free_v1' }],
+                    [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2 (18+)', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Turbo18Plus', callback_data: 'set_turbo_18' }]
                 ]
             }
         });
@@ -484,6 +489,22 @@ bot.on('callback_query', async (query) => {
             };
         }
         users[userId].model = "Premium V2";
+        saveUsers(users);
+        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V2" }));
+    } else if (query.data === 'set_turbo_18') {
+        if (!users[userId]) {
+            // Initialize the user object if it doesn't exist
+            users[userId] = {
+                attempts: 0,
+                premium: {
+                    isPremium: false,
+                    expire: null
+                },
+                model: "Turbo18Plus", // Default model
+                language: "en"
+            };
+        }
+        users[userId].model = "Turbo18Plus";
         saveUsers(users);
         await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V2" }));
     } else if (query.data === 'buy_premium') {
