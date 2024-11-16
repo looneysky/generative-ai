@@ -28,13 +28,14 @@ function generatePhoto(prompt) {
 
             // Если процесс завершен, ищем данные в поле "data"
             if (data.msg === 'process_completed') {
-                if (data.output && data.output.data && data.output.data.length > 0) {
-                    const imageUrl = data.output.data[0][0].name;  // Проверка первого элемента в data
-                    if (imageUrl) {
+                if (data.output && Array.isArray(data.output.data) && data.output.data.length > 0) {
+                    const firstItem = data.output.data[0];
+                    if (firstItem && firstItem[0] && firstItem[0].name) {
+                        const imageUrl = firstItem[0].name;
                         console.log(`Ссылка из поля "name": ${imageUrl}`);
                         resolve(imageUrl); // Возвращаем ссылку на фото
                     } else {
-                        reject('Нет ссылки в данных');
+                        reject('Нет поля "name" в данных');
                     }
                 } else {
                     reject('Нет данных в поле "data" или оно пустое');
