@@ -407,7 +407,7 @@ bot.on('callback_query', async (query) => {
                 inline_keyboard: [
                     [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
                     [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }]
+                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }],
                     [{ text: 'Turbo18Plus', callback_data: 'set_turbo_18' }]
                 ]
             }
