@@ -12,6 +12,7 @@ const channelTelegram = process.env.CHANNEL_USERNAME;
 const chatTelegram = process.env.CHAT_LINK;
 const nowpayments_api = process.env.NOWPAYMENTS_API;
 const webhook_url = process.env.WEBHOOK_URL;
+const admins = process.env.ADMINS;
 
 // Экспортируем переменные
 module.exports = {
@@ -24,5 +25,6 @@ module.exports = {
     channelTelegram,
     chatTelegram,
     nowpayments_api,
-    webhook_url
+    webhook_url,
+    admins,
 };

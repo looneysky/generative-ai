@@ -9,7 +9,7 @@ const translatte = require('translatte');
 const sharp = require('sharp');
 const webhook = require('./modules/webhookModule'); // Импортируем ваш модуль
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
-const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
+const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram, admins } = require('./modules/configModule');
 const { createPayment, generateQr } = require('./modules/paymentModule');
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
@@ -221,6 +221,58 @@ bot.onText(/\/start/, (msg) => {
     }
 });
 
+bot.onText(/\/send/, async (msg) => {
+    const userId = msg.from.id;
+    const chatId = msg.chat.id;
+    const users = loadUsers();
+
+    // Убедимся, что команда пришла от администратора
+    const adminsArray = admins.split(',').map(Number);
+
+    if (!adminsArray.includes(userId)) {
+        bot.sendMessage(chatId, "Вы не являетесь администратором.");
+        return;
+    }
+
+    // Проверим, что сообщение переслано
+    if (!msg.reply_to_message) {
+        bot.sendMessage(chatId, "Пожалуйста, пересланное сообщение необходимо для рассылки.");
+        return;
+    }
+
+    // Получаем сообщение для рассылки
+    const forwardedMessage = msg.reply_to_message;
+
+    // Разсылаем сообщение всем пользователям
+    const userIds = Object.keys(users);
+    for (const id of userIds) {
+        try {
+            // Проверяем, активен ли пользователь
+            if (users[id]) {
+                // Отправляем текст
+                if (forwardedMessage.text) {
+                    await bot.sendMessage(id, forwardedMessage.text);
+                }
+
+                // Отправляем фото
+                if (forwardedMessage.photo) {
+                    const photoId = forwardedMessage.photo[forwardedMessage.photo.length - 1].file_id;
+                    await bot.sendPhoto(id, photoId, { caption: forwardedMessage.caption });
+                }
+
+                // Отправляем видео
+                if (forwardedMessage.video) {
+                    const videoId = forwardedMessage.video.file_id;
+                    await bot.sendVideo(id, videoId, { caption: forwardedMessage.caption });
+                }
+            }
+        } catch (error) {
+            console.error(`Ошибка при отправке сообщения пользователю ${id}:`, error);
+        }
+    }
+
+    bot.sendMessage(chatId, "Рассылка завершена.");
+});
 
 // Обработка всех остальных сообщений для генерации изображения
 bot.on('message', async (msg) => {
