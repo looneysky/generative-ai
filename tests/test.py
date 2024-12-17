@@ -2,7 +2,7 @@ import requests
 import hashlib
 
 # URL вашего вебхука
-url = 'http://localhost:3000/webhook'
+url = 'https://test-project-generative-ai-v2.3gpeil.easypanel.host/webhook'
 
 # Ваш секретный ключ для расчета хэша
 secret = 'NpVh2NNjOstzy0gUFJmsWzlw'
@@ -15,12 +15,12 @@ for i in range(num_requests):
     data = {
         'notification_type': 'p2p-incoming',
         'operation_id': f'test-notification-{i}',  # Уникальный operation_id для каждого запроса
-        'amount': '199.00',
+        'amount': '199',
         'currency': '643',
         'datetime': '2024-10-08T22:35:05Z',
         'sender': '41001000040',
         'codepro': 'false',
-        'label': '7275188161'  # userId
+        'label': '1620011186'  # userId
     }
 
     # Создаем строку для хэша в правильном порядке
