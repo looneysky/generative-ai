@@ -250,7 +250,7 @@ bot.on('message', async (msg) => {
 
         if (users[userId].premium.isPremium === false) {
             // Проверяем количество попыток
-            if (users[userId].attemps >= 3) {
+            if (users[userId].attemps >= 50000000000) {
                 const message = getTranslation(users[userId], 'attemptLimitMessage', { time: getTimeUntilReset() });
                 bot.sendMessage(userId, message, {
                     reply_markup: {
