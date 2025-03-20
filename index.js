@@ -10,9 +10,7 @@ const sharp = require('sharp');
 const webhook = require('./modules/webhookModule'); // Импортируем ваш модуль
 const { saveUsers, loadUsers, models } = require('./modules/baseModule');
 const { secret, token, runwareApi, runwareApi2, priceMonth, priceMonths, priceYear, channelTelegram, chatTelegram } = require('./modules/configModule');
-const { generateImageV2 } = require('./modules/newModelV2');
 const { generatePhoto } = require('./modules/pornModel');
-const { generateImage } = require('./modules/newModel');
 const { createImageV2 } = require('./modules/createImage');
 const bot = require('./modules/botModule');
 const { getTimeUntilReset } = require('./modules/timeModule');
@@ -94,43 +92,6 @@ async function isUserSubscribed(chatId, channelUsername) {
     }
 }
 
-async function generateImageWithBackup(prompt) {
-    const url = 'https://aiimagegenerator.io/api/model/predict-peach';
-
-    const data = {
-        prompt: prompt,
-        negativePrompt: "",
-        key: "Cinematic",
-        width: 1024,
-        height: 1024,
-        quantity: 1,
-        size: "1024x1024"
-    };
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*',
-        'Origin': 'https://aiimagegenerator.io',
-        'Referer': 'https://aiimagegenerator.io/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0'
-    };
-
-    try {
-        const response = await axios.post(url, data, { headers });
-
-        if (response.status === 200 && response.data.code === 0) {
-            const imageUrl = response.data.data.url;
-            console.log('Изображение успешно сгенерировано:', imageUrl);
-            return imageUrl;
-        } else {
-            throw new Error('Не удалось сгенерировать изображение: ' + response.data.message);
-        }
-    } catch (error) {
-        console.error('Ошибка при выполнении запроса:', error.message);
-        throw error; // Пробрасываем ошибку для обработки в createImage
-    }
-}
-
 // Main function to create an image based on user model
 async function createImage(prompt, userId) {
     try {
@@ -146,15 +107,6 @@ async function createImage(prompt, userId) {
         switch (user.model) {
             case "Free V1":
                 return await createImageV2(prompt);
-
-            case "Premium V1":
-                /*return await generateImage(prompt);*/
-                return await generateImage(prompt);
-
-            // Assuming this is part of your createImage function
-            case "Premium V2":
-                return await generateImageV2(prompt);
-
             case "Turbo18Plus":
                 return await generatePhoto(prompt);
 
@@ -406,8 +358,6 @@ bot.on('callback_query', async (query) => {
             reply_markup: {
                 inline_keyboard: [
                     [{ text: 'FastFlux V1', callback_data: 'set_free_v1' }],
-                    [{ text: 'Premium V1', callback_data: 'set_premium_v1' }],
-                    [{ text: 'Premium V2', callback_data: 'set_premium_v2' }],
                     [{ text: 'Turbo18Plus', callback_data: 'set_turbo_18' }]
                 ]
             }
@@ -418,7 +368,6 @@ bot.on('callback_query', async (query) => {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: '🇺🇸 English', callback_data: 'language_en' },
                         { text: '🇷🇺 Русский', callback_data: 'language_ru' }
                     ]
                 ]
@@ -434,7 +383,7 @@ bot.on('callback_query', async (query) => {
                     expire: null
                 },
                 model: "Free V1", // Default model
-                language: "en"
+                language: "ru"
             };
         }
         // Установка нового языка
@@ -443,22 +392,6 @@ bot.on('callback_query', async (query) => {
         saveUsers(users);
 
         bot.sendMessage(query.message.chat.id, getTranslation(user, 'languageChanged'));
-    } else if (query.data === 'set_premium_v1') {
-        if (!users[userId]) {
-            // Initialize the user object if it doesn't exist
-            users[userId] = {
-                attempts: 0,
-                premium: {
-                    isPremium: false,
-                    expire: null
-                },
-                model: "Free V1", // Default model
-                language: "en"
-            };
-        }
-        users[userId].model = "Premium V1";
-        saveUsers(users);
-        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V1" }));
     } else if (query.data === 'set_free_v1') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
@@ -469,28 +402,12 @@ bot.on('callback_query', async (query) => {
                     expire: null
                 },
                 model: "Free V1", // Default model
-                language: "en"
+                language: "ru"
             };
         }
         users[userId].model = "Free V1";
         saveUsers(users);
         await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "FastFlux V1" }));
-    } else if (query.data === 'set_premium_v2') {
-        if (!users[userId]) {
-            // Initialize the user object if it doesn't exist
-            users[userId] = {
-                attempts: 0,
-                premium: {
-                    isPremium: false,
-                    expire: null
-                },
-                model: "Free V1", // Default model
-                language: "en"
-            };
-        }
-        users[userId].model = "Premium V2";
-        saveUsers(users);
-        await bot.sendMessage(userId, getTranslation(user, 'modelChangedMessage', { model: "Premium V2" }));
     } else if (query.data === 'set_turbo_18') {
         if (!users[userId]) {
             // Initialize the user object if it doesn't exist
@@ -501,7 +418,7 @@ bot.on('callback_query', async (query) => {
                     expire: null
                 },
                 model: "Turbo18Plus", // Default model
-                language: "en"
+                language: "ru"
             };
         }
         users[userId].model = "Turbo18Plus";
